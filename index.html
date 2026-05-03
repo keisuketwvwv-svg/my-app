@@ -350,6 +350,46 @@
             font-family: inherit;
             margin-top: 10px;
         }
+
+        /* ── Charts ── */
+        .charts-section { margin-bottom: 16px; }
+        .charts-section.hidden { display: none; }
+
+        .charts-head {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 10px;
+            padding: 0 2px;
+        }
+
+        .chart-card {
+            background: var(--card);
+            border-radius: var(--r);
+            padding: 14px 14px 18px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .chart-card:last-child { margin-bottom: 0; }
+
+        .chart-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 14px;
+        }
+
+        .chart-pie-wrap {
+            max-width: 260px;
+            margin: 0 auto;
+        }
+
+        .chart-bar-wrap {
+            position: relative;
+            min-height: 120px;
+        }
     </style>
 </head>
 <body>
@@ -386,6 +426,32 @@
             </div>
         </div>
     </div>
+
+    <!-- Charts -->
+    <section class="charts-section hidden" id="chartsSection">
+        <div class="charts-head">グラフ</div>
+
+        <div class="chart-card">
+            <div class="chart-title">銘柄別 保有割合</div>
+            <div class="chart-pie-wrap">
+                <canvas id="chartFundPie"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-title">口座別 資産比率（NISA・特定）</div>
+            <div class="chart-pie-wrap">
+                <canvas id="chartAccountPie"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-title">銘柄別 損益</div>
+            <div class="chart-bar-wrap" id="chartBarWrap">
+                <canvas id="chartPnLBar"></canvas>
+            </div>
+        </div>
+    </section>
 
     <!-- NISA口座 -->
     <div class="account-block">
@@ -477,6 +543,7 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
 'use strict';
 
@@ -485,6 +552,14 @@ const STORAGE_KEY = 'tokushi_portfolio_v1';
 // ── State ──────────────────────────────────────────────────────────────────
 let funds = [];
 let editId = null;
+
+// ── Chart Instances ────────────────────────────────────────────────────────
+const PALETTE = [
+    '#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6',
+    '#ec4899','#06b6d4','#84cc16','#f97316','#6366f1','#14b8a6','#a855f7'
+];
+const CHART_FONT = "-apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif";
+let chartFundPie = null, chartAccountPie = null, chartPnLBar = null;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -517,6 +592,7 @@ function render() {
     renderSummary();
     renderAccount('NISA', 'nisaList',    'nisaHeadRight');
     renderAccount('特定', 'tokuteiList', 'tokuteiHeadRight');
+    renderCharts();
 }
 
 function renderSummary() {
@@ -604,6 +680,134 @@ function renderAccount(acType, listId, headRightId) {
             </div>
         </div>`;
     }).join('');
+}
+
+// ── Charts ─────────────────────────────────────────────────────────────────
+function renderCharts() {
+    const section = $('chartsSection');
+    if (funds.length === 0) {
+        section.classList.add('hidden');
+        [chartFundPie, chartAccountPie, chartPnLBar].forEach(c => c && c.destroy());
+        chartFundPie = chartAccountPie = chartPnLBar = null;
+        return;
+    }
+    section.classList.remove('hidden');
+
+    const legendLabels = (size) => ({
+        font: { size, family: CHART_FONT },
+        padding: 10,
+        boxWidth: 12,
+        color: '#0f172a'
+    });
+    const pctTooltip = ctx => {
+        const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+        const pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : '0.0';
+        return ` ${yen(ctx.raw)}（${pct}%）`;
+    };
+    const doughnutOpts = (legendSize = 11) => ({
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { position: 'bottom', labels: legendLabels(legendSize) },
+            tooltip: { callbacks: { label: pctTooltip } }
+        }
+    });
+
+    // ── 銘柄別 保有割合（ドーナツ）──
+    const fundLabels = funds.map(f => f.name.length > 15 ? f.name.slice(0, 15) + '…' : f.name);
+    const fundValues = funds.map(f => Math.round(calcFund(f).value));
+
+    if (chartFundPie) chartFundPie.destroy();
+    chartFundPie = new Chart($('chartFundPie'), {
+        type: 'doughnut',
+        data: {
+            labels: fundLabels,
+            datasets: [{
+                data: fundValues,
+                backgroundColor: PALETTE.slice(0, funds.length),
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: doughnutOpts(11)
+    });
+
+    // ── 口座別 資産比率（ドーナツ）──
+    const nisaVal    = funds.filter(f => f.account === 'NISA').reduce((s, f) => s + calcFund(f).value, 0);
+    const tokuteiVal = funds.filter(f => f.account === '特定').reduce((s, f) => s + calcFund(f).value, 0);
+
+    if (chartAccountPie) chartAccountPie.destroy();
+    chartAccountPie = new Chart($('chartAccountPie'), {
+        type: 'doughnut',
+        data: {
+            labels: ['NISA口座', '特定口座'],
+            datasets: [{
+                data: [Math.round(nisaVal), Math.round(tokuteiVal)],
+                backgroundColor: ['#059669', '#d97706'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: doughnutOpts(12)
+    });
+
+    // ── 銘柄別 損益（横棒グラフ）──
+    const pnlValues  = funds.map(f => Math.round(calcFund(f).pnl));
+    const barLabels  = funds.map(f => f.name.length > 14 ? f.name.slice(0, 14) + '…' : f.name);
+    const barBg      = pnlValues.map(v => v >= 0 ? 'rgba(37,99,235,0.82)'  : 'rgba(220,38,38,0.82)');
+    const barBorder  = pnlValues.map(v => v >= 0 ? '#1d4ed8' : '#b91c1c');
+
+    const barHeight = Math.max(140, funds.length * 52);
+    $('chartBarWrap').style.height = barHeight + 'px';
+
+    if (chartPnLBar) chartPnLBar.destroy();
+    chartPnLBar = new Chart($('chartPnLBar'), {
+        type: 'bar',
+        data: {
+            labels: barLabels,
+            datasets: [{
+                data: pnlValues,
+                backgroundColor: barBg,
+                borderColor: barBorder,
+                borderWidth: 1,
+                borderRadius: 4,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: { label: ctx => ` ${pnlStr(ctx.raw)}` }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: '#e2e8f0' },
+                    border: { color: '#cbd5e1' },
+                    ticks: {
+                        font: { size: 11, family: CHART_FONT },
+                        color: '#64748b',
+                        maxTicksLimit: 6,
+                        callback: v => {
+                            const a = Math.abs(v);
+                            if (a >= 1000000) return (v / 1000000).toFixed(1) + 'M';
+                            if (a >= 10000)   return (v / 10000).toFixed(0) + '万';
+                            return v.toLocaleString('ja-JP');
+                        }
+                    }
+                },
+                y: {
+                    grid: { display: false },
+                    border: { color: '#cbd5e1' },
+                    ticks: { font: { size: 11, family: CHART_FONT }, color: '#374151' }
+                }
+            }
+        }
+    });
 }
 
 // ── Modal ──────────────────────────────────────────────────────────────────
