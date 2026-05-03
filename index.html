@@ -351,6 +351,57 @@
             margin-top: 10px;
         }
 
+        /* ── Action Bar ── */
+        .action-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .btn-action {
+            flex: 1;
+            padding: 11px 6px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            transition: opacity 0.15s, transform 0.1s;
+            line-height: 1.2;
+        }
+        .btn-action:active { opacity: 0.65; transform: scale(0.96); }
+        .btn-action .btn-icon-lg { font-size: 18px; }
+        .btn-save-act  { background: #eff6ff; color: var(--primary); }
+        .btn-csv-act   { background: #f0fdf4; color: #047857; }
+        .btn-reset-act { background: #fef2f2; color: var(--loss); }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            bottom: 96px;
+            left: 50%;
+            transform: translateX(-50%) translateY(12px);
+            background: #1e293b;
+            color: white;
+            padding: 10px 22px;
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.22s, transform 0.22s;
+            z-index: 300;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
         /* ── Charts ── */
         .charts-section { margin-bottom: 16px; }
         .charts-section.hidden { display: none; }
@@ -427,6 +478,19 @@
         </div>
     </div>
 
+    <!-- Action Bar -->
+    <div class="action-bar">
+        <button class="btn-action btn-save-act" id="btnSaveData">
+            <span class="btn-icon-lg">💾</span>保存
+        </button>
+        <button class="btn-action btn-csv-act" id="btnExportCSV">
+            <span class="btn-icon-lg">📥</span>CSV出力
+        </button>
+        <button class="btn-action btn-reset-act" id="btnReset">
+            <span class="btn-icon-lg">🗑️</span>リセット
+        </button>
+    </div>
+
     <!-- Charts -->
     <section class="charts-section hidden" id="chartsSection">
         <div class="charts-head">グラフ</div>
@@ -478,6 +542,9 @@
     </div>
 
 </main>
+
+<!-- ── Toast ── -->
+<div class="toast" id="toast"></div>
 
 <!-- ── FAB ── -->
 <button class="fab" id="fabAdd" title="銘柄を追加">+</button>
@@ -544,6 +611,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2/encoding.min.js"></script>
 <script>
 'use strict';
 
@@ -895,6 +963,80 @@ function deleteFund(id) {
     render();
 }
 
+// ── Toast ──────────────────────────────────────────────────────────────────
+let _toastTimer = null;
+function showToast(msg) {
+    const el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── Save (explicit) ────────────────────────────────────────────────────────
+function saveData() {
+    persist();
+    showToast('✓ 保存しました');
+}
+
+// ── Reset ──────────────────────────────────────────────────────────────────
+function resetData() {
+    if (!confirm('すべてのデータを初期化しますか？\nこの操作は元に戻せません。')) return;
+    funds = [];
+    persist();
+    render();
+    showToast('データをリセットしました');
+}
+
+// ── CSV Export ─────────────────────────────────────────────────────────────
+function exportCSV() {
+    if (funds.length === 0) { alert('エクスポートするデータがありません'); return; }
+
+    const headers = [
+        '銘柄名', '口座種別', '保有口数（口）',
+        '取得単価（円/万口）', '現在基準価額（円/万口）',
+        '取得金額（円）', '現在評価額（円）', '損益額（円）', '損益率（%）'
+    ];
+
+    const rows = funds.map(f => {
+        const { cost, value, pnl, rate } = calcFund(f);
+        return [
+            f.name,
+            f.account + '口座',
+            f.qty,
+            f.acq,
+            f.cur,
+            Math.round(cost),
+            Math.round(value),
+            Math.round(pnl),
+            rate.toFixed(2)
+        ];
+    });
+
+    const csv = [headers, ...rows]
+        .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+        .join('\r\n');
+
+    // Convert to Shift-JIS for Excel compatibility
+    const sjis = Encoding.convert(Encoding.stringToCode(csv), { to: 'SJIS', from: 'UNICODE' });
+    const blob = new Blob([new Uint8Array(sjis)], { type: 'text/csv;charset=shift-jis;' });
+
+    const d = new Date();
+    const dateStr = String(d.getFullYear())
+        + String(d.getMonth() + 1).padStart(2, '0')
+        + String(d.getDate()).padStart(2, '0');
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `投資管理_${dateStr}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+
+    showToast('📥 CSVを出力しました');
+}
+
 // ── Date ───────────────────────────────────────────────────────────────────
 function setDate() {
     const d = new Date();
@@ -905,6 +1047,9 @@ function setDate() {
 }
 
 // ── Event Listeners ────────────────────────────────────────────────────────
+$('btnSaveData').addEventListener('click', saveData);
+$('btnExportCSV').addEventListener('click', exportCSV);
+$('btnReset').addEventListener('click', resetData);
 $('fabAdd').addEventListener('click', openAdd);
 $('btnSave').addEventListener('click', saveFund);
 $('btnCancel').addEventListener('click', closeModal);
