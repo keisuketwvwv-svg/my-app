@@ -600,6 +600,37 @@
             transform: translateX(-50%) translateY(0);
         }
 
+        /* ── Collapsible Sections ── */
+        .sec-toggle-head {
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .sec-toggle-head:active { opacity: 0.82; }
+        .sec-right { display: flex; align-items: center; gap: 8px; }
+        .chevron {
+            font-size: 11px;
+            flex-shrink: 0;
+            margin-left: 4px;
+            opacity: 0.75;
+        }
+        .sec-body.collapsed { display: none; }
+
+        /* ── Grouped Price Table ── */
+        .pt-group-head-row > td:first-child { padding-bottom: 4px; border-bottom: none; }
+        .pt-sub-row td {
+            padding: 5px 12px 5px 22px;
+            background: #f8fafc;
+            font-size: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .pt-sub-row:last-child td { border-bottom: none; }
+        .pt-sub-info { display: flex; align-items: center; gap: 8px; }
+        .pt-sub-detail { font-size: 11px; color: var(--text-muted); }
+        .pt-pnl-total-label { font-size: 10px; color: var(--text-muted); margin-bottom: 1px; }
+        .pt-input-cell { vertical-align: middle; }
+
         /* ── Charts ── */
         .charts-section { margin-bottom: 16px; }
         .charts-section.hidden { display: none; }
@@ -612,6 +643,9 @@
             letter-spacing: 0.8px;
             margin-bottom: 10px;
             padding: 0 2px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .chart-card {
@@ -691,117 +725,140 @@
 
     <!-- Price Update Table -->
     <div class="price-section hidden" id="priceSection">
-        <div class="price-sec-head">
+        <div class="price-sec-head sec-toggle-head" data-target="priceSectionBody">
             <span class="price-sec-title">💹 現在価格を更新</span>
-            <span class="last-updated" id="lastUpdated">未更新</span>
+            <div class="sec-right">
+                <span class="last-updated" id="lastUpdated">未更新</span>
+                <span class="chevron" id="priceSectionBodyChevron">▲</span>
+            </div>
         </div>
-        <div class="price-tbl-wrap">
-            <table class="price-tbl">
-                <thead>
-                    <tr>
-                        <th>銘柄</th>
-                        <th>現在価格（円/万口）</th>
-                        <th>損益</th>
-                    </tr>
-                </thead>
-                <tbody id="priceTableBody"></tbody>
-            </table>
+        <div id="priceSectionBody" class="sec-body">
+            <div class="price-tbl-wrap">
+                <table class="price-tbl">
+                    <thead>
+                        <tr>
+                            <th>銘柄</th>
+                            <th>現在価格（円/万口）</th>
+                            <th>損益</th>
+                        </tr>
+                    </thead>
+                    <tbody id="priceTableBody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <!-- Charts -->
     <section class="charts-section hidden" id="chartsSection">
-        <div class="charts-head">グラフ</div>
-
-        <div class="chart-card">
-            <div class="chart-title">銘柄別 保有割合</div>
-            <div class="chart-pie-wrap">
-                <canvas id="chartFundPie"></canvas>
-            </div>
+        <div class="charts-head sec-toggle-head" data-target="chartsSectionBody">
+            <span>グラフ</span>
+            <span class="chevron" id="chartsSectionBodyChevron">▼</span>
         </div>
-
-        <div class="chart-card">
-            <div class="chart-title">口座別 資産比率（NISA・特定）</div>
-            <div class="chart-pie-wrap">
-                <canvas id="chartAccountPie"></canvas>
+        <div id="chartsSectionBody" class="sec-body collapsed">
+            <div class="chart-card">
+                <div class="chart-title">銘柄別 保有割合</div>
+                <div class="chart-pie-wrap">
+                    <canvas id="chartFundPie"></canvas>
+                </div>
             </div>
-        </div>
-
-        <div class="chart-card">
-            <div class="chart-title">銘柄別 損益</div>
-            <div class="chart-bar-wrap" id="chartBarWrap">
-                <canvas id="chartPnLBar"></canvas>
+            <div class="chart-card">
+                <div class="chart-title">口座別 資産比率（NISA・特定）</div>
+                <div class="chart-pie-wrap">
+                    <canvas id="chartAccountPie"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">銘柄別 損益</div>
+                <div class="chart-bar-wrap" id="chartBarWrap">
+                    <canvas id="chartPnLBar"></canvas>
+                </div>
             </div>
         </div>
     </section>
 
     <!-- NISA口座 -->
     <div class="account-block">
-        <div class="account-head nisa">
+        <div class="account-head nisa sec-toggle-head" data-target="nisaBlockBody">
             <h2>🌱 NISA口座</h2>
-            <div class="account-head-right" id="nisaHeadRight">
-                <div class="acc-value">¥0</div>
-                <div>損益: ¥0</div>
+            <div class="sec-right">
+                <div class="account-head-right" id="nisaHeadRight">
+                    <div class="acc-value">¥0</div>
+                    <div>損益: ¥0</div>
+                </div>
+                <span class="chevron" id="nisaBlockBodyChevron">▲</span>
             </div>
         </div>
-        <div class="fund-list" id="nisaList"></div>
+        <div id="nisaBlockBody" class="sec-body">
+            <div class="fund-list" id="nisaList"></div>
+        </div>
     </div>
 
     <!-- 特定口座 -->
     <div class="account-block">
-        <div class="account-head tokutei">
+        <div class="account-head tokutei sec-toggle-head" data-target="tokuteiBlockBody">
             <h2>📊 特定口座</h2>
-            <div class="account-head-right" id="tokuteiHeadRight">
-                <div class="acc-value">¥0</div>
-                <div>損益: ¥0</div>
+            <div class="sec-right">
+                <div class="account-head-right" id="tokuteiHeadRight">
+                    <div class="acc-value">¥0</div>
+                    <div>損益: ¥0</div>
+                </div>
+                <span class="chevron" id="tokuteiBlockBodyChevron">▲</span>
             </div>
         </div>
-        <div class="fund-list" id="tokuteiList"></div>
+        <div id="tokuteiBlockBody" class="sec-body">
+            <div class="fund-list" id="tokuteiList"></div>
+        </div>
     </div>
 
     <!-- History / Time-Series Section -->
     <section class="history-section" id="historySection">
-        <div class="history-head">
+        <div class="history-head sec-toggle-head" data-target="historySectionBody">
             <span class="history-head-label">📅 資産推移</span>
-            <button class="btn-record" id="btnRecord">今日のデータを記録</button>
-        </div>
-
-        <!-- Line charts (shown after first record) -->
-        <div id="histCharts" class="hidden">
-            <div class="chart-card">
-                <div class="chart-title">総資産の推移</div>
-                <div class="chart-line-wrap">
-                    <canvas id="chartValueLine"></canvas>
-                </div>
-            </div>
-            <div class="chart-card">
-                <div class="chart-title">損益の推移</div>
-                <div class="chart-line-wrap">
-                    <canvas id="chartPnLLine"></canvas>
-                </div>
+            <div class="sec-right">
+                <button class="btn-record" id="btnRecord">今日のデータを記録</button>
+                <span class="chevron" id="historySectionBodyChevron">▼</span>
             </div>
         </div>
+        <div id="historySectionBody" class="sec-body collapsed">
 
-        <!-- History table -->
-        <div class="chart-card">
-            <div class="chart-title-row">
-                <div class="chart-title">記録一覧</div>
-                <button class="btn-csv-hist" id="btnExportHistCSV">📥 CSV出力</button>
+            <!-- Line charts (shown after ≥2 records) -->
+            <div id="histCharts" class="hidden">
+                <div class="chart-card">
+                    <div class="chart-title">総資産の推移</div>
+                    <div class="chart-line-wrap">
+                        <canvas id="chartValueLine"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">損益の推移</div>
+                    <div class="chart-line-wrap">
+                        <canvas id="chartPnLLine"></canvas>
+                    </div>
+                </div>
             </div>
-            <div class="hist-tbl-wrap">
-                <table class="hist-tbl">
-                    <thead>
-                        <tr>
-                            <th>日付</th>
-                            <th>総評価額</th>
-                            <th>損益額</th>
-                            <th>損益率</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody id="histTableBody"></tbody>
-                </table>
+
+            <!-- History table -->
+            <div class="chart-card">
+                <div class="chart-title-row">
+                    <div class="chart-title">記録一覧</div>
+                    <button class="btn-csv-hist" id="btnExportHistCSV">📥 CSV出力</button>
+                </div>
+                <div class="hist-tbl-wrap">
+                    <table class="hist-tbl">
+                        <thead>
+                            <tr>
+                                <th>日付</th>
+                                <th>総評価額</th>
+                                <th>損益額</th>
+                                <th>損益率</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="histTableBody"></tbody>
+                    </table>
+                </div>
             </div>
+
         </div>
     </section>
 
@@ -885,6 +942,7 @@ const STORAGE_KEY = 'tokushi_portfolio_v1';
 let funds = [];
 let history = [];   // time-series snapshots
 let editId = null;
+let _fundGroups = [];  // grouped by name, cached for price input handler
 
 // ── Chart Instances ────────────────────────────────────────────────────────
 const PALETTE = [
@@ -1042,36 +1100,102 @@ function renderLastUpdated() {
     el.textContent = `更新: ${d.getFullYear()}/${pad2(d.getMonth()+1)}/${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
+function buildFundGroups() {
+    const map = new Map(), order = [];
+    funds.forEach(f => {
+        if (!map.has(f.name)) { map.set(f.name, []); order.push(f.name); }
+        map.get(f.name).push(f);
+    });
+    return order.map(name => ({ name, items: map.get(name) }));
+}
+
 function renderPriceTable() {
     const section = $('priceSection');
     if (funds.length === 0) { section.classList.add('hidden'); return; }
     section.classList.remove('hidden');
 
-    $('priceTableBody').innerHTML = funds.map(f => {
-        const { pnl, rate } = calcFund(f);
-        const cls   = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : 'zero';
-        const acCls = f.account === 'NISA' ? 'nisa' : 'tokutei';
-        const yahoo = `https://finance.yahoo.co.jp/search/?query=${encodeURIComponent(f.name)}`;
-        return `
-        <tr>
-            <td>
-                <div class="pt-name-text">${esc(f.name)}</div>
-                <div class="pt-meta">
-                    <span class="pt-badge ${acCls}">${esc(f.account)}</span>
-                    <a class="pt-yahoo" href="${yahoo}" target="_blank" rel="noopener noreferrer">Yahoo!ファイナンス ↗</a>
-                </div>
-            </td>
-            <td>
-                <input class="price-inp" type="text" inputmode="decimal"
-                       value="${f.cur}" data-id="${f.id}" autocomplete="off" autocorrect="off">
-            </td>
-            <td class="pt-pnl-col">
-                <span class="pt-pnl ${cls}"  id="pt-pnl-${f.id}">${pnlStr(pnl)}</span>
-                <span class="pt-rate ${cls}" id="pt-rate-${f.id}">(${rateStr(rate)})</span>
-            </td>
-        </tr>`;
-    }).join('');
+    _fundGroups = buildFundGroups();
+    let html = '';
 
+    _fundGroups.forEach((group, gi) => {
+        const { name, items } = group;
+        const yahoo = `https://finance.yahoo.co.jp/search/?query=${encodeURIComponent(name)}`;
+
+        if (items.length === 1) {
+            // ── 単一口座 ──────────────────────────────────────────────────
+            const f = items[0];
+            const { pnl, rate } = calcFund(f);
+            const cls   = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : 'zero';
+            const acCls = f.account === 'NISA' ? 'nisa' : 'tokutei';
+            html += `
+            <tr>
+                <td>
+                    <div class="pt-name-text">${esc(name)}</div>
+                    <div class="pt-meta">
+                        <span class="pt-badge ${acCls}">${esc(f.account)}</span>
+                        <a class="pt-yahoo" href="${yahoo}" target="_blank" rel="noopener noreferrer">Yahoo! ↗</a>
+                    </div>
+                </td>
+                <td>
+                    <input class="price-inp" type="text" inputmode="decimal"
+                           value="${f.cur}" data-group-idx="${gi}" autocomplete="off" autocorrect="off">
+                </td>
+                <td class="pt-pnl-col">
+                    <span class="pt-pnl ${cls}"  id="pt-pnl-${f.id}">${pnlStr(pnl)}</span>
+                    <span class="pt-rate ${cls}" id="pt-rate-${f.id}">(${rateStr(rate)})</span>
+                </td>
+            </tr>`;
+        } else {
+            // ── 複数口座グループ（同一銘柄名・異口座）────────────────────
+            let gCost = 0, gValue = 0;
+            items.forEach(f => { const c = calcFund(f); gCost += c.cost; gValue += c.value; });
+            const gPnl  = gValue - gCost;
+            const gRate = gCost > 0 ? (gPnl / gCost) * 100 : 0;
+            const gCls  = gPnl > 0 ? 'gain' : gPnl < 0 ? 'loss' : 'zero';
+
+            // ヘッダー行（共通価格入力・合計損益）
+            html += `
+            <tr class="pt-group-head-row">
+                <td>
+                    <div class="pt-name-text">${esc(name)}</div>
+                    <div class="pt-meta">
+                        <a class="pt-yahoo" href="${yahoo}" target="_blank" rel="noopener noreferrer">Yahoo! ↗</a>
+                    </div>
+                </td>
+                <td rowspan="${items.length + 1}" class="pt-input-cell">
+                    <input class="price-inp" type="text" inputmode="decimal"
+                           value="${items[0].cur}" data-group-idx="${gi}" autocomplete="off" autocorrect="off">
+                </td>
+                <td class="pt-pnl-col">
+                    <div class="pt-pnl-total-label">合計</div>
+                    <span class="pt-pnl ${gCls}"  id="pt-total-pnl-${gi}">${pnlStr(gPnl)}</span>
+                    <span class="pt-rate ${gCls}" id="pt-total-rate-${gi}">(${rateStr(gRate)})</span>
+                </td>
+            </tr>`;
+
+            // 口座別サブ行（口数・取得単価・個別損益）
+            items.forEach(f => {
+                const { pnl, rate } = calcFund(f);
+                const cls   = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : 'zero';
+                const acCls = f.account === 'NISA' ? 'nisa' : 'tokutei';
+                html += `
+            <tr class="pt-sub-row">
+                <td>
+                    <div class="pt-sub-info">
+                        <span class="pt-badge ${acCls}">${esc(f.account)}</span>
+                        <span class="pt-sub-detail">${f.qty.toLocaleString()}口 / 取得¥${f.acq.toLocaleString()}</span>
+                    </div>
+                </td>
+                <td class="pt-pnl-col">
+                    <span class="pt-pnl ${cls}"  id="pt-pnl-${f.id}">${pnlStr(pnl)}</span>
+                    <span class="pt-rate ${cls}" id="pt-rate-${f.id}">(${rateStr(rate)})</span>
+                </td>
+            </tr>`;
+            });
+        }
+    });
+
+    $('priceTableBody').innerHTML = html;
     renderLastUpdated();
 }
 
@@ -1567,6 +1691,38 @@ function exportHistCSV() {
     showToast('📥 推移CSVを出力しました');
 }
 
+// ── Section Collapse ───────────────────────────────────────────────────────
+const SECTIONS_KEY = 'tokushi_sections_v1';
+const DEFAULT_SECTIONS = {
+    priceSectionBody:   true,   // 価格更新: 開く
+    chartsSectionBody:  false,  // グラフ: 閉じる
+    nisaBlockBody:      true,   // NISA: 開く
+    tokuteiBlockBody:   true,   // 特定: 開く
+    historySectionBody: false   // 資産推移: 閉じる
+};
+
+function loadSectionStates() {
+    try { return { ...DEFAULT_SECTIONS, ...JSON.parse(localStorage.getItem(SECTIONS_KEY)) }; }
+    catch { return { ...DEFAULT_SECTIONS }; }
+}
+
+function saveSectionState(bodyId, isOpen) {
+    const s = loadSectionStates();
+    s[bodyId] = isOpen;
+    localStorage.setItem(SECTIONS_KEY, JSON.stringify(s));
+}
+
+function applySectionStates() {
+    const states = loadSectionStates();
+    Object.entries(states).forEach(([bodyId, isOpen]) => {
+        const body    = $(bodyId);
+        const chevron = $(bodyId + 'Chevron');
+        if (!body) return;
+        body.classList.toggle('collapsed', !isOpen);
+        if (chevron) chevron.textContent = isOpen ? '▲' : '▼';
+    });
+}
+
 // ── Date ───────────────────────────────────────────────────────────────────
 function setDate() {
     const d = new Date();
@@ -1581,7 +1737,7 @@ $('btnSaveData').addEventListener('click', saveData);
 $('btnExportCSV').addEventListener('click', exportCSV);
 $('btnReset').addEventListener('click', resetData);
 $('fabAdd').addEventListener('click', openAdd);
-$('btnRecord').addEventListener('click', recordSnapshot);
+$('btnRecord').addEventListener('click', e => { e.stopPropagation(); recordSnapshot(); });
 $('btnExportHistCSV').addEventListener('click', exportHistCSV);
 
 // ── Price table: auto-select on focus ──────────────────────────────────────
@@ -1589,13 +1745,12 @@ $('priceTableBody').addEventListener('focusin', e => {
     if (e.target.classList.contains('price-inp')) e.target.select();
 });
 
-// ── Price table: instant recalculation on input ────────────────────────────
+// ── Price table: instant recalculation on input (grouped) ─────────────────
 $('priceTableBody').addEventListener('input', e => {
     if (!e.target.classList.contains('price-inp')) return;
     const input = e.target;
-    const id    = input.dataset.id;
+    const gi    = parseInt(input.dataset.groupIdx);
 
-    // Strip ¥ signs, commas, spaces — allow digits and one decimal point
     const cleaned = input.value.replace(/[^0-9.]/g, '');
     if (cleaned !== input.value) {
         const pos = Math.max(0, input.selectionStart - (input.value.length - cleaned.length));
@@ -1606,21 +1761,66 @@ $('priceTableBody').addEventListener('input', e => {
     const price = parseFloat(cleaned);
     if (!price || price <= 0) return;
 
-    const f = funds.find(f => f.id === id);
-    if (!f || f.cur === price) return;
-    f.cur = price;
+    const group = _fundGroups[gi];
+    if (!group) return;
+
+    let changed = false;
+    group.items.forEach(f => { if (f.cur !== price) { f.cur = price; changed = true; } });
+    if (!changed) return;
+
     persist();
     stampPriceUpdated();
 
-    // Instantly update only this row's P&L cells
-    const { pnl, rate } = calcFund(f);
-    const cls   = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : 'zero';
-    const pnlEl  = $('pt-pnl-'  + id);
-    const rateEl = $('pt-rate-' + id);
-    if (pnlEl)  { pnlEl.textContent  = pnlStr(pnl);              pnlEl.className  = 'pt-pnl '  + cls; }
-    if (rateEl) { rateEl.textContent = '(' + rateStr(rate) + ')'; rateEl.className = 'pt-rate ' + cls; }
+    // Inline update for each fund in group
+    let gCost = 0, gValue = 0;
+    group.items.forEach(f => {
+        const { cost, value, pnl, rate } = calcFund(f);
+        gCost  += cost;
+        gValue += value;
+        const cls    = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : 'zero';
+        const pnlEl  = $('pt-pnl-'  + f.id);
+        const rateEl = $('pt-rate-' + f.id);
+        if (pnlEl)  { pnlEl.textContent  = pnlStr(pnl);              pnlEl.className  = 'pt-pnl '  + cls; }
+        if (rateEl) { rateEl.textContent = '(' + rateStr(rate) + ')'; rateEl.className = 'pt-rate ' + cls; }
+    });
+
+    // Update group total row (複数口座グループの場合)
+    if (group.items.length > 1) {
+        const gPnl  = gValue - gCost;
+        const gRate = gCost > 0 ? (gPnl / gCost) * 100 : 0;
+        const gCls  = gPnl > 0 ? 'gain' : gPnl < 0 ? 'loss' : 'zero';
+        const tpEl  = $('pt-total-pnl-'  + gi);
+        const trEl  = $('pt-total-rate-' + gi);
+        if (tpEl) { tpEl.textContent  = pnlStr(gPnl);              tpEl.className  = 'pt-pnl '  + gCls; }
+        if (trEl) { trEl.textContent = '(' + rateStr(gRate) + ')'; trEl.className = 'pt-rate ' + gCls; }
+    }
 
     schedulePartialRender();
+});
+
+// ── Section toggle (event delegation) ─────────────────────────────────────
+document.addEventListener('click', e => {
+    const head = e.target.closest('.sec-toggle-head');
+    if (!head || !head.dataset.target) return;
+    const bodyId  = head.dataset.target;
+    const body    = $(bodyId);
+    if (!body) return;
+    const chevron = $(bodyId + 'Chevron');
+    const isOpen  = !body.classList.contains('collapsed');
+    body.classList.toggle('collapsed', isOpen);
+    if (chevron) chevron.textContent = isOpen ? '▼' : '▲';
+    saveSectionState(bodyId, !isOpen);
+
+    // Chart.js resize after section opens
+    if (!isOpen) {
+        requestAnimationFrame(() => {
+            if (bodyId === 'chartsSectionBody') {
+                [chartFundPie, chartAccountPie, chartPnLBar].forEach(c => c && c.resize());
+            } else if (bodyId === 'historySectionBody') {
+                [chartValueLine, chartPnLLine].forEach(c => c && c.resize());
+            }
+        });
+    }
 });
 $('btnSave').addEventListener('click', saveFund);
 $('btnCancel').addEventListener('click', closeModal);
@@ -1635,6 +1835,7 @@ $('overlay').addEventListener('click', e => {
 load();
 setDate();
 render();
+applySectionStates();
 </script>
 
 </body>
