@@ -292,6 +292,104 @@
         .pt-pnl.loss,  .pt-rate.loss  { color: var(--loss); }
         .pt-pnl.zero,  .pt-rate.zero  { color: var(--text-muted); }
 
+        /* ── History / Time-Series ── */
+        .history-section { margin-bottom: 16px; }
+
+        .history-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .history-head-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+        .btn-record {
+            padding: 9px 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+        .btn-record:active { opacity: 0.8; }
+
+        .chart-line-wrap { position: relative; height: 200px; }
+
+        .chart-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+        .chart-title-row .chart-title { margin-bottom: 0; }
+
+        .btn-csv-hist {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 5px 10px;
+            border-radius: 6px;
+            background: #f0fdf4;
+            color: #047857;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .btn-csv-hist:active { opacity: 0.7; }
+
+        .hist-tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .hist-tbl {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 280px;
+        }
+        .hist-tbl th {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-muted);
+            padding: 7px 10px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+            text-align: right;
+        }
+        .hist-tbl th:first-child { text-align: left; }
+        .hist-tbl th:last-child  { text-align: center; }
+        .hist-tbl td {
+            padding: 9px 10px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            text-align: right;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+        .hist-tbl tr:last-child td { border-bottom: none; }
+        .hist-tbl td:first-child { text-align: left; font-weight: 600; color: var(--text-muted); }
+        .hist-tbl td:last-child  { text-align: center; }
+        .hist-value { font-weight: 700; color: var(--text); }
+        .hist-pnl.gain, .hist-rate.gain { color: var(--gain); font-weight: 700; }
+        .hist-pnl.loss, .hist-rate.loss { color: var(--loss); font-weight: 700; }
+        .hist-pnl.zero, .hist-rate.zero { color: var(--text-muted); }
+
+        .btn-hist-del {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 5px;
+            background: #fef2f2;
+            color: var(--loss);
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .btn-hist-del:active { opacity: 0.65; }
+
         /* ── FAB ── */
         .fab {
             position: fixed;
@@ -661,6 +759,52 @@
         <div class="fund-list" id="tokuteiList"></div>
     </div>
 
+    <!-- History / Time-Series Section -->
+    <section class="history-section" id="historySection">
+        <div class="history-head">
+            <span class="history-head-label">📅 資産推移</span>
+            <button class="btn-record" id="btnRecord">今日のデータを記録</button>
+        </div>
+
+        <!-- Line charts (shown after first record) -->
+        <div id="histCharts" class="hidden">
+            <div class="chart-card">
+                <div class="chart-title">総資産の推移</div>
+                <div class="chart-line-wrap">
+                    <canvas id="chartValueLine"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">損益の推移</div>
+                <div class="chart-line-wrap">
+                    <canvas id="chartPnLLine"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- History table -->
+        <div class="chart-card">
+            <div class="chart-title-row">
+                <div class="chart-title">記録一覧</div>
+                <button class="btn-csv-hist" id="btnExportHistCSV">📥 CSV出力</button>
+            </div>
+            <div class="hist-tbl-wrap">
+                <table class="hist-tbl">
+                    <thead>
+                        <tr>
+                            <th>日付</th>
+                            <th>総評価額</th>
+                            <th>損益額</th>
+                            <th>損益率</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="histTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
 </main>
 
 <!-- ── Toast ── -->
@@ -739,6 +883,7 @@ const STORAGE_KEY = 'tokushi_portfolio_v1';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let funds = [];
+let history = [];   // time-series snapshots
 let editId = null;
 
 // ── Chart Instances ────────────────────────────────────────────────────────
@@ -748,6 +893,7 @@ const PALETTE = [
 ];
 const CHART_FONT = "-apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif";
 let chartFundPie = null, chartAccountPie = null, chartPnLBar = null;
+let chartValueLine = null, chartPnLLine = null;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -766,13 +912,19 @@ function calcFund(f) {
 }
 
 // ── Persistence ────────────────────────────────────────────────────────────
+const HISTORY_KEY = 'tokushi_history_v1';
+
 function load() {
-    try { funds = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-    catch { funds = []; }
+    try { funds   = JSON.parse(localStorage.getItem(STORAGE_KEY))  || []; } catch { funds   = []; }
+    try { history = JSON.parse(localStorage.getItem(HISTORY_KEY))  || []; } catch { history = []; }
 }
 
 function persist() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(funds));
+}
+
+function persistHistory() {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
 }
 
 // ── Render ─────────────────────────────────────────────────────────────────
@@ -782,6 +934,7 @@ function render() {
     renderAccount('NISA', 'nisaList',    'nisaHeadRight');
     renderAccount('特定', 'tokuteiList', 'tokuteiHeadRight');
     renderCharts();
+    renderHistory();
 }
 
 function renderSummary() {
@@ -1165,9 +1318,11 @@ function saveData() {
 
 // ── Reset ──────────────────────────────────────────────────────────────────
 function resetData() {
-    if (!confirm('すべてのデータを初期化しますか？\nこの操作は元に戻せません。')) return;
+    if (!confirm('すべてのデータを初期化しますか？\n銘柄データと記録履歴の両方が消えます。\nこの操作は元に戻せません。')) return;
     funds = [];
+    history = [];
     persist();
+    persistHistory();
     render();
     showToast('データをリセットしました');
 }
@@ -1221,6 +1376,197 @@ function exportCSV() {
     showToast('📥 CSVを出力しました');
 }
 
+// ── History / Time-Series ──────────────────────────────────────────────────
+function todayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+}
+
+function recordSnapshot() {
+    if (funds.length === 0) { alert('記録する銘柄データがありません'); return; }
+
+    let totalCost = 0, totalValue = 0;
+    funds.forEach(f => { const c = calcFund(f); totalCost += c.cost; totalValue += c.value; });
+    const pnl  = totalValue - totalCost;
+    const rate = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+
+    const today = todayStr();
+    const snap  = {
+        date:  today,
+        value: Math.round(totalValue),
+        cost:  Math.round(totalCost),
+        pnl:   Math.round(pnl),
+        rate:  parseFloat(rate.toFixed(2))
+    };
+
+    const idx = history.findIndex(h => h.date === today);
+    if (idx >= 0) {
+        if (!confirm(`${today} の記録を上書きしますか？`)) return;
+        history[idx] = snap;
+        showToast('今日のデータを更新しました ✓');
+    } else {
+        history.push(snap);
+        history.sort((a, b) => a.date.localeCompare(b.date));
+        showToast('✓ データを記録しました');
+    }
+    persistHistory();
+    renderHistory();
+}
+
+function deleteHistEntry(date) {
+    if (!confirm(`${date} の記録を削除しますか？`)) return;
+    history = history.filter(h => h.date !== date);
+    persistHistory();
+    renderHistory();
+}
+
+function renderHistory() {
+    const chartsEl = $('histCharts');
+    if (history.length >= 2) {
+        chartsEl.classList.remove('hidden');
+        renderHistoryCharts();
+    } else if (history.length < 2) {
+        chartsEl.classList.add('hidden');
+        if (chartValueLine) { chartValueLine.destroy(); chartValueLine = null; }
+        if (chartPnLLine)   { chartPnLLine.destroy();   chartPnLLine   = null; }
+    }
+    renderHistTable();
+}
+
+function renderHistTable() {
+    const tbody = $('histTableBody');
+    if (history.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px 10px;color:var(--text-muted);font-size:13px;">まだ記録がありません<br><small>「今日のデータを記録」を押してスナップショットを保存できます</small></td></tr>';
+        return;
+    }
+    tbody.innerHTML = [...history].reverse().map(h => {
+        const cls = h.pnl > 0 ? 'gain' : h.pnl < 0 ? 'loss' : 'zero';
+        return `
+        <tr>
+            <td>${h.date}</td>
+            <td class="hist-value">${yen(h.value)}</td>
+            <td class="hist-pnl ${cls}">${pnlStr(h.pnl)}</td>
+            <td class="hist-rate ${cls}">${rateStr(h.rate)}</td>
+            <td><button class="btn-hist-del" onclick="deleteHistEntry('${h.date}')">削除</button></td>
+        </tr>`;
+    }).join('');
+}
+
+function renderHistoryCharts() {
+    const labels    = history.map(h => { const d = new Date(h.date); return `${d.getMonth()+1}/${d.getDate()}`; });
+    const longLabels = history.map(h => h.date);
+    const values    = history.map(h => h.value);
+    const pnls      = history.map(h => h.pnl);
+    const ptRadius  = history.length > 30 ? 2 : 4;
+
+    const xAxis = {
+        grid:   { color: '#e2e8f0' },
+        border: { color: '#cbd5e1' },
+        ticks:  { font: { size: 11, family: CHART_FONT }, color: '#64748b', maxTicksLimit: 8, maxRotation: 0 }
+    };
+    const yFmt = v => {
+        const a = Math.abs(v);
+        if (a >= 1000000) return (v/1000000).toFixed(1) + 'M';
+        if (a >= 10000)   return (v/10000).toFixed(0) + '万';
+        return v.toLocaleString('ja-JP');
+    };
+    const yAxis = (extra = {}) => ({
+        grid:   { color: '#e2e8f0' },
+        border: { color: '#cbd5e1' },
+        ticks:  { font: { size: 11, family: CHART_FONT }, color: '#64748b', callback: yFmt },
+        ...extra
+    });
+
+    // ── 総資産 line chart ──
+    if (chartValueLine) chartValueLine.destroy();
+    chartValueLine = new Chart($('chartValueLine'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                data: values,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37,99,235,0.07)',
+                borderWidth: 2.5,
+                pointBackgroundColor: '#2563eb',
+                pointRadius: ptRadius,
+                pointHoverRadius: 5,
+                tension: 0.35,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { title: (items) => longLabels[items[0].dataIndex], label: ctx => ` ${yen(ctx.raw)}` } }
+            },
+            scales: { x: xAxis, y: yAxis() }
+        }
+    });
+
+    // ── 損益 line chart ──
+    if (chartPnLLine) chartPnLLine.destroy();
+    chartPnLLine = new Chart($('chartPnLLine'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                data: pnls,
+                borderColor: '#059669',
+                backgroundColor: 'rgba(5,150,105,0.07)',
+                borderWidth: 2.5,
+                pointBackgroundColor: pnls.map(v => v >= 0 ? '#059669' : '#dc2626'),
+                pointRadius: ptRadius,
+                pointHoverRadius: 5,
+                tension: 0.35,
+                fill: true,
+                segment: {
+                    borderColor: ctx => ctx.p0.parsed.y < 0 ? '#dc2626' : '#059669',
+                    backgroundColor: ctx => ctx.p0.parsed.y < 0 ? 'rgba(220,38,38,0.07)' : 'rgba(5,150,105,0.07)'
+                }
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { title: (items) => longLabels[items[0].dataIndex], label: ctx => ` ${pnlStr(ctx.raw)}` } }
+            },
+            scales: { x: xAxis, y: yAxis() }
+        }
+    });
+}
+
+// ── History CSV Export ──────────────────────────────────────────────────────
+function exportHistCSV() {
+    if (history.length === 0) { alert('エクスポートするデータがありません'); return; }
+
+    const headers = ['日付', '総評価額（円）', '総取得額（円）', '損益額（円）', '損益率（%）'];
+    const rows = [...history].reverse().map(h => [h.date, h.value, h.cost, h.pnl, h.rate]);
+
+    const csv = [headers, ...rows]
+        .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+        .join('\r\n');
+
+    const sjis = Encoding.convert(Encoding.stringToCode(csv), { to: 'SJIS', from: 'UNICODE' });
+    const blob = new Blob([new Uint8Array(sjis)], { type: 'text/csv;charset=shift-jis;' });
+
+    const d = new Date();
+    const ds = String(d.getFullYear()) + pad2(d.getMonth()+1) + pad2(d.getDate());
+    const a  = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `投資管理_推移_${ds}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+
+    showToast('📥 推移CSVを出力しました');
+}
+
 // ── Date ───────────────────────────────────────────────────────────────────
 function setDate() {
     const d = new Date();
@@ -1235,6 +1581,8 @@ $('btnSaveData').addEventListener('click', saveData);
 $('btnExportCSV').addEventListener('click', exportCSV);
 $('btnReset').addEventListener('click', resetData);
 $('fabAdd').addEventListener('click', openAdd);
+$('btnRecord').addEventListener('click', recordSnapshot);
+$('btnExportHistCSV').addEventListener('click', exportHistCSV);
 
 // ── Price table: auto-select on focus ──────────────────────────────────────
 $('priceTableBody').addEventListener('focusin', e => {
