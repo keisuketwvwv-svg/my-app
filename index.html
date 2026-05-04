@@ -192,6 +192,106 @@
             font-size: 13px;
         }
 
+        /* ── Price Update Table ── */
+        .price-section {
+            background: var(--card);
+            border-radius: var(--r);
+            margin-bottom: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .price-section.hidden { display: none; }
+
+        .price-sec-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 11px 14px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+        }
+        .price-sec-title { font-size: 14px; font-weight: 700; }
+        .last-updated { font-size: 11px; color: var(--text-muted); }
+
+        .price-tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+        .price-tbl {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 300px;
+        }
+        .price-tbl th {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-align: left;
+            padding: 7px 12px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        .price-tbl th:last-child { text-align: right; }
+        .price-tbl td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        .price-tbl tr:last-child td { border-bottom: none; }
+
+        .pt-name-text {
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.35;
+            margin-bottom: 5px;
+        }
+        .pt-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .pt-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: white;
+            flex-shrink: 0;
+        }
+        .pt-badge.nisa    { background: var(--nisa); }
+        .pt-badge.tokutei { background: var(--tokutei); }
+
+        .pt-yahoo {
+            font-size: 10px;
+            color: var(--primary);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .pt-yahoo:active { opacity: 0.65; }
+
+        .price-inp {
+            width: 100%;
+            min-width: 84px;
+            padding: 9px 10px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+            background: var(--bg);
+            font-family: inherit;
+            text-align: right;
+            transition: border-color 0.15s, background 0.15s;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .price-inp:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+        }
+
+        .pt-pnl-col { text-align: right; }
+        .pt-pnl  { font-size: 13px; font-weight: 800; display: block; white-space: nowrap; }
+        .pt-rate { font-size: 11px; font-weight: 600; display: block; margin-top: 1px; white-space: nowrap; }
+        .pt-pnl.gain,  .pt-rate.gain  { color: var(--gain); }
+        .pt-pnl.loss,  .pt-rate.loss  { color: var(--loss); }
+        .pt-pnl.zero,  .pt-rate.zero  { color: var(--text-muted); }
+
         /* ── FAB ── */
         .fab {
             position: fixed;
@@ -491,6 +591,26 @@
         </button>
     </div>
 
+    <!-- Price Update Table -->
+    <div class="price-section hidden" id="priceSection">
+        <div class="price-sec-head">
+            <span class="price-sec-title">💹 現在価格を更新</span>
+            <span class="last-updated" id="lastUpdated">未更新</span>
+        </div>
+        <div class="price-tbl-wrap">
+            <table class="price-tbl">
+                <thead>
+                    <tr>
+                        <th>銘柄</th>
+                        <th>現在価格（円/万口）</th>
+                        <th>損益</th>
+                    </tr>
+                </thead>
+                <tbody id="priceTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- Charts -->
     <section class="charts-section hidden" id="chartsSection">
         <div class="charts-head">グラフ</div>
@@ -658,6 +778,7 @@ function persist() {
 // ── Render ─────────────────────────────────────────────────────────────────
 function render() {
     renderSummary();
+    renderPriceTable();
     renderAccount('NISA', 'nisaList',    'nisaHeadRight');
     renderAccount('特定', 'tokuteiList', 'tokuteiHeadRight');
     renderCharts();
@@ -748,6 +869,69 @@ function renderAccount(acType, listId, headRightId) {
             </div>
         </div>`;
     }).join('');
+}
+
+// ── Price Update Table ─────────────────────────────────────────────────────
+const LAST_UPDATED_KEY = 'tokushi_price_updated_v1';
+const pad2 = n => String(n).padStart(2, '0');
+
+function stampPriceUpdated() {
+    localStorage.setItem(LAST_UPDATED_KEY, new Date().toISOString());
+    renderLastUpdated();
+}
+
+function renderLastUpdated() {
+    const iso = localStorage.getItem(LAST_UPDATED_KEY);
+    const el = $('lastUpdated');
+    if (!el) return;
+    if (!iso) { el.textContent = '未更新'; return; }
+    const d = new Date(iso);
+    el.textContent = `更新: ${d.getFullYear()}/${pad2(d.getMonth()+1)}/${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function renderPriceTable() {
+    const section = $('priceSection');
+    if (funds.length === 0) { section.classList.add('hidden'); return; }
+    section.classList.remove('hidden');
+
+    $('priceTableBody').innerHTML = funds.map(f => {
+        const { pnl, rate } = calcFund(f);
+        const cls   = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : 'zero';
+        const acCls = f.account === 'NISA' ? 'nisa' : 'tokutei';
+        const yahoo = `https://finance.yahoo.co.jp/search/?query=${encodeURIComponent(f.name)}`;
+        return `
+        <tr>
+            <td>
+                <div class="pt-name-text">${esc(f.name)}</div>
+                <div class="pt-meta">
+                    <span class="pt-badge ${acCls}">${esc(f.account)}</span>
+                    <a class="pt-yahoo" href="${yahoo}" target="_blank" rel="noopener noreferrer">Yahoo!ファイナンス ↗</a>
+                </div>
+            </td>
+            <td>
+                <input class="price-inp" type="text" inputmode="decimal"
+                       value="${f.cur}" data-id="${f.id}" autocomplete="off" autocorrect="off">
+            </td>
+            <td class="pt-pnl-col">
+                <span class="pt-pnl ${cls}"  id="pt-pnl-${f.id}">${pnlStr(pnl)}</span>
+                <span class="pt-rate ${cls}" id="pt-rate-${f.id}">(${rateStr(rate)})</span>
+            </td>
+        </tr>`;
+    }).join('');
+
+    renderLastUpdated();
+}
+
+// Debounced partial re-render (skips price table to preserve input focus)
+let _priceRenderTimer = null;
+function schedulePartialRender() {
+    clearTimeout(_priceRenderTimer);
+    _priceRenderTimer = setTimeout(() => {
+        renderSummary();
+        renderAccount('NISA', 'nisaList',    'nisaHeadRight');
+        renderAccount('特定', 'tokuteiList', 'tokuteiHeadRight');
+        renderCharts();
+    }, 400);
 }
 
 // ── Charts ─────────────────────────────────────────────────────────────────
@@ -1051,6 +1235,45 @@ $('btnSaveData').addEventListener('click', saveData);
 $('btnExportCSV').addEventListener('click', exportCSV);
 $('btnReset').addEventListener('click', resetData);
 $('fabAdd').addEventListener('click', openAdd);
+
+// ── Price table: auto-select on focus ──────────────────────────────────────
+$('priceTableBody').addEventListener('focusin', e => {
+    if (e.target.classList.contains('price-inp')) e.target.select();
+});
+
+// ── Price table: instant recalculation on input ────────────────────────────
+$('priceTableBody').addEventListener('input', e => {
+    if (!e.target.classList.contains('price-inp')) return;
+    const input = e.target;
+    const id    = input.dataset.id;
+
+    // Strip ¥ signs, commas, spaces — allow digits and one decimal point
+    const cleaned = input.value.replace(/[^0-9.]/g, '');
+    if (cleaned !== input.value) {
+        const pos = Math.max(0, input.selectionStart - (input.value.length - cleaned.length));
+        input.value = cleaned;
+        try { input.setSelectionRange(pos, pos); } catch (_) {}
+    }
+
+    const price = parseFloat(cleaned);
+    if (!price || price <= 0) return;
+
+    const f = funds.find(f => f.id === id);
+    if (!f || f.cur === price) return;
+    f.cur = price;
+    persist();
+    stampPriceUpdated();
+
+    // Instantly update only this row's P&L cells
+    const { pnl, rate } = calcFund(f);
+    const cls   = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : 'zero';
+    const pnlEl  = $('pt-pnl-'  + id);
+    const rateEl = $('pt-rate-' + id);
+    if (pnlEl)  { pnlEl.textContent  = pnlStr(pnl);              pnlEl.className  = 'pt-pnl '  + cls; }
+    if (rateEl) { rateEl.textContent = '(' + rateStr(rate) + ')'; rateEl.className = 'pt-rate ' + cls; }
+
+    schedulePartialRender();
+});
 $('btnSave').addEventListener('click', saveFund);
 $('btnCancel').addEventListener('click', closeModal);
 $('overlay').addEventListener('click', e => {
