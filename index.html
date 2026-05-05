@@ -631,6 +631,36 @@
         .pt-pnl-total-label { font-size: 10px; color: var(--text-muted); margin-bottom: 1px; }
         .pt-input-cell { vertical-align: middle; }
 
+        /* ── Auto-price badge ── */
+        .auto-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 20px;
+            background: #f0fdf4;
+            color: #047857;
+            border: 1px solid #bbf7d0;
+            white-space: nowrap;
+        }
+        .auto-badge.stale { background: #fefce8; color: #a16207; border-color: #fde68a; }
+        .btn-auto-fetch {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: #eff6ff;
+            color: var(--primary);
+            border: 1px solid #bfdbfe;
+            cursor: pointer;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+        .btn-auto-fetch:active { opacity: 0.7; }
+        .btn-auto-fetch.loading { opacity: 0.6; pointer-events: none; }
+
         /* ── Goal Progress ── */
         .goal-progress-wrap {
             margin-top: 14px;
@@ -875,6 +905,7 @@
         <div class="price-sec-head sec-toggle-head" data-target="priceSectionBody">
             <span class="price-sec-title">💹 現在価格を更新</span>
             <div class="sec-right">
+                <button class="btn-auto-fetch" id="btnAutoFetch" title="prices.jsonから価格を再読込">🤖 自動取得</button>
                 <span class="last-updated" id="lastUpdated">未更新</span>
                 <span class="chevron" id="priceSectionBodyChevron">▲</span>
             </div>
@@ -1880,6 +1911,82 @@ function exportHistCSV() {
     showToast('📥 推移CSVを出力しました');
 }
 
+// ── Auto Price Load (prices.json) ──────────────────────────────────────────
+async function loadPricesJSON(showFeedback = false) {
+    const btn = $('btnAutoFetch');
+    if (btn) { btn.classList.add('loading'); btn.textContent = '取得中…'; }
+
+    try {
+        const resp = await fetch('prices.json?' + Date.now());
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+
+        const priceMap = data.prices || {};
+        const updatedAt = data.updated || '';
+
+        if (Object.keys(priceMap).length === 0) {
+            if (showFeedback) showToast('⚠️ prices.json にデータがありません');
+            return;
+        }
+
+        let count = 0;
+        funds.forEach(f => {
+            const entry = priceMap[f.name];
+            if (entry && entry.price > 0 && f.cur !== entry.price) {
+                f.cur = entry.price;
+                count++;
+            }
+        });
+
+        if (count > 0) {
+            persist();
+            stampPriceUpdated();
+            render();
+        }
+
+        // 取得日時をツールチップ/ラベルに表示
+        renderAutoBadge(updatedAt, priceMap);
+
+        if (showFeedback) {
+            if (count > 0) {
+                showToast(`🤖 ${count}件の基準価額を自動更新しました`);
+            } else {
+                showToast('基準価額はすでに最新です');
+            }
+        }
+    } catch (e) {
+        // GitHub Pages 以外（file:// など）では prices.json が読めないのは正常
+        if (showFeedback) showToast('⚠️ prices.json を読み込めません（GitHub Pages でホストする必要があります）');
+    } finally {
+        if (btn) { btn.classList.remove('loading'); btn.textContent = '🤖 自動取得'; }
+    }
+}
+
+function renderAutoBadge(updatedAt, priceMap) {
+    const lastUpdEl = $('lastUpdated');
+    if (!lastUpdEl || !updatedAt) return;
+
+    // 取得日時が古いかチェック（48時間以上前なら stale）
+    const isStale = updatedAt && (Date.now() - new Date(updatedAt).getTime()) > 48 * 3600 * 1000;
+    const dateLabel = updatedAt
+        ? new Date(updatedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : '';
+
+    const badgeEl = document.getElementById('autoPriceBadge');
+    if (!badgeEl && dateLabel) {
+        const badge = document.createElement('span');
+        badge.id = 'autoPriceBadge';
+        badge.className = 'auto-badge' + (isStale ? ' stale' : '');
+        badge.title = `prices.json 更新: ${updatedAt}`;
+        badge.textContent = `🤖 ${dateLabel}`;
+        lastUpdEl.parentNode.insertBefore(badge, lastUpdEl);
+    } else if (badgeEl && dateLabel) {
+        badgeEl.className = 'auto-badge' + (isStale ? ' stale' : '');
+        badgeEl.textContent = `🤖 ${dateLabel}`;
+        badgeEl.title = `prices.json 更新: ${updatedAt}`;
+    }
+}
+
 // ── CAGR ───────────────────────────────────────────────────────────────────
 function calcCAGR(currentValue, principal, startDate) {
     const start = new Date(startDate);
@@ -2034,6 +2141,7 @@ $('fabAdd').addEventListener('click', openAdd);
 $('btnRecord').addEventListener('click', e => { e.stopPropagation(); recordSnapshot(); });
 $('btnExportHistCSV').addEventListener('click', exportHistCSV);
 $('btnSettingsSave').addEventListener('click', e => { e.stopPropagation(); saveSettings(); });
+$('btnAutoFetch').addEventListener('click', e => { e.stopPropagation(); loadPricesJSON(true); });
 
 // ── Price table: auto-select on focus ──────────────────────────────────────
 $('priceTableBody').addEventListener('focusin', e => {
@@ -2132,6 +2240,8 @@ setDate();
 render();
 applySectionStates();
 applySettingsToInputs();
+// prices.json が存在すれば自動で価格を反映（失敗してもエラーにならない）
+loadPricesJSON(false);
 </script>
 
 </body>

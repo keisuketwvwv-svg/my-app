@@ -1,0 +1,21 @@
+{
+  "_comment": "ファンドコードを登録してください。コードは https://www.toushin.or.jp/statistics/detail/ で銘柄名検索後に確認できます（英数字8文字）。name はアプリ内の銘柄名と完全一致させることで価格が自動反映されます。",
+  "funds": [
+    {
+      "name": "eMAXIS Slim 全世界株式（オール・カントリー）",
+      "code": "0331418A"
+    },
+    {
+      "name": "eMAXIS Slim 米国株式（S&P500）",
+      "code": "0331119A"
+    },
+    {
+      "name": "eMAXIS Slim 国内株式（TOPIX）",
+      "code": "0131103C"
+    },
+    {
+      "name": "eMAXIS Slim バランス（8資産均等型）",
+      "code": "0131423A"
+    }
+  ]
+}
