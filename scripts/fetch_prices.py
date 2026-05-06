@@ -156,10 +156,21 @@ def parse_price(html: str, debug: bool = False) -> tuple[int | None, str]:
 
 # ── ソース別フェッチ ──────────────────────────────────────────────────────────
 
-def _fetch_html(url: str) -> tuple[int, str]:
-    """URL をフェッチして (status_code, html) を返す。"""
-    r = SESSION.get(url, timeout=20, allow_redirects=True)
-    return r.status_code, r.text
+def _fetch_html(url: str, retries: int = 3) -> tuple[int, str]:
+    """URL をフェッチして (status_code, html) を返す。失敗時はリトライ。"""
+    last_exc = None
+    for attempt in range(1, retries + 1):
+        try:
+            r = SESSION.get(url, timeout=20, allow_redirects=True)
+            return r.status_code, r.text
+        except (requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout) as e:
+            last_exc = e
+            if attempt < retries:
+                wait = 2 ** attempt
+                print(f"      リトライ {attempt}/{retries-1} ({wait}s後)…", file=sys.stderr)
+                time.sleep(wait)
+    raise last_exc
 
 
 def fetch_nav(fund_code: str, debug: bool = False) -> dict | None:
