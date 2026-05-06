@@ -1917,7 +1917,7 @@ async function loadPricesJSON(showFeedback = false) {
     if (btn) { btn.classList.add('loading'); btn.textContent = '取得中…'; }
 
     try {
-        const resp = await fetch('prices.json?' + Date.now());
+        const resp = await fetch('https://raw.githubusercontent.com/keisuketwvwv-svg/my-app/main/prices.json?' + Date.now());
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
 
@@ -1956,7 +1956,7 @@ async function loadPricesJSON(showFeedback = false) {
         }
     } catch (e) {
         // GitHub Pages 以外（file:// など）では prices.json が読めないのは正常
-        if (showFeedback) showToast('⚠️ prices.json を読み込めません（GitHub Pages でホストする必要があります）');
+        if (showFeedback) showToast('⚠️ prices.json を読み込めません（リポジトリが公開されているか確認してください）');
     } finally {
         if (btn) { btn.classList.remove('loading'); btn.textContent = '🤖 自動取得'; }
     }
