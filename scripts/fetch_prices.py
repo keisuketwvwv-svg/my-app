@@ -150,6 +150,13 @@ def parse_price(html: str, debug: bool = False) -> tuple[int | None, str]:
 
     if debug:
         print("    [parse_price] 価格を検出できませんでした")
+        # ページの先頭と基準価額周辺を出力して構造を確認
+        snippet = html[:3000].replace("\r", "").replace("\n", " ")
+        print(f"    [HTML先頭3000字] {snippet!r}")
+        import re as _re
+        # 数値パターンを全抽出
+        nums = _re.findall(r"\d{1,3}(?:,\d{3})+", html)
+        print(f"    [X,XXX形式の数値] {nums[:30]}")
 
     return None, ""
 
@@ -162,7 +169,21 @@ def _fetch_html(url: str, retries: int = 3) -> tuple[int, str]:
     for attempt in range(1, retries + 1):
         try:
             r = SESSION.get(url, timeout=20, allow_redirects=True)
-            return r.status_code, r.text
+            # Morningstar 等 日本語サイトは EUC-JP の場合があるため多重試行
+            content_type = r.headers.get("Content-Type", "").lower()
+            if "charset=" in content_type:
+                html = r.text  # requests が自動デコード
+            else:
+                html = None
+                for enc in ("utf-8", "euc-jp", "cp932", "shift-jis"):
+                    try:
+                        html = r.content.decode(enc)
+                        break
+                    except (UnicodeDecodeError, LookupError):
+                        continue
+                if html is None:
+                    html = r.content.decode("utf-8", errors="replace")
+            return r.status_code, html
         except (requests.exceptions.ConnectionError,
                 requests.exceptions.Timeout) as e:
             last_exc = e
