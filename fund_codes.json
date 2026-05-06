@@ -1,21 +1,25 @@
 {
-  "_comment": "ファンドコードを登録してください。コードは https://www.toushin.or.jp/statistics/detail/ で銘柄名検索後に確認できます（英数字8文字）。name はアプリ内の銘柄名と完全一致させることで価格が自動反映されます。",
+  "_comment": "code: 投資信託協会コード（8文字）。isin: ISINコード（toushin-lib CSV取得に使用）。name はアプリ内の銘柄名と完全一致させることで価格が自動反映されます。",
   "funds": [
     {
       "name": "eMAXIS Slim全世界株式(オール･カントリー)",
-      "code": "0331418A"
+      "code": "0331418A",
+      "isin": "JP90C000H1T1"
     },
     {
       "name": "eMAXIS Slim米国株式(S&P500)",
-      "code": "0331119A"
+      "code": "03311187",
+      "isin": "JP90C000GKC6"
     },
     {
       "name": "ニッセイ 外国株式インデックスファンド",
-      "code": "2931113C"
+      "code": "2931113C",
+      "isin": "JP90C0009VE0"
     },
     {
       "name": "iFreeNEXT FANG+インデックス",
-      "code": "04311181"
+      "code": "04311181",
+      "isin": "JP90C000FZD4"
     }
   ]
 }

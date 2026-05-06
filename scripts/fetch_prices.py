@@ -3,18 +3,23 @@
 基準価額自動取得スクリプト
 
 データソース（優先順）:
-  1. ウエルスアドバイザー  https://www.wealthadvisor.co.jp/FundData/SnapShot.do?fnc={code}
-     （旧モーニングスター Japan — 同一システム、ドメインのみ変更）
-  2. みんかぶ             https://minkabu.jp/fund/{code}
+  1. 投信総合検索ライブラリー CSV
+     https://toushin-lib.fwg.ne.jp/FdsWeb/FDST030000/csv-file-download
+     ?isinCd={isin}&associFundCd={code}
+     ※ fund_codes.json に isin を設定した銘柄のみ使用（推奨）
+  2. Yahoo Finance Japan  https://finance.yahoo.co.jp/quote/{code}
+  3. みんかぶ             https://minkabu.jp/fund/{code}
 
 ファンドコードの確認: https://toushin-lib.fwg.ne.jp/FdsWeb/
-  → 銘柄名で検索 → 8文字の投資信託協会コードを fund_codes.json に登録
+  → 銘柄名で検索 → 8文字の投資信託協会コードと ISINコードを fund_codes.json に登録
 
 トラブルシュート:
-  python scripts/fetch_prices.py --debug  # HTML を dump して確認
+  python scripts/fetch_prices.py --debug  # HTML/CSV を dump して確認
 """
 
 import argparse
+import csv
+import io
 import json
 import re
 import sys
@@ -55,7 +60,7 @@ SESSION.headers.update({
 def _to_price(raw: str) -> int | None:
     """カンマ除去・範囲チェックして int を返す。範囲外なら None。"""
     try:
-        p = int(raw.replace(",", "").replace("，", ""))
+        p = int(raw.replace(",", "").replace("，", "").strip())
         return p if PRICE_MIN <= p <= PRICE_MAX else None
     except (ValueError, OverflowError):
         return None
@@ -104,6 +109,7 @@ def parse_price(html: str, debug: bool = False) -> tuple[int | None, str]:
         "unitPrice", "unit_price",
         "basePrice", "base_price",
         "basicPrice", "basicprice",
+        "currentPrice", "current_price",
         "nav", "NAV",
         "price", "Price",
         "netAssetValue", "net_asset_value",
@@ -125,8 +131,6 @@ def parse_price(html: str, debug: bool = False) -> tuple[int | None, str]:
 
     # ── 2. HTML テキストパターン ─────────────────────────────────────────────
     HTML_PATTERNS = [
-        # wealthadvisor.co.jp の <span class="fprice">
-        r'class=["\']fprice["\'][^>]*>\s*([\d,]{4,8})',
         # 「基準価額」直後の数値
         r"基準価額[^<\d]{0,20}(\d[\d,]{3,7})(?:\s*円|\s*<|\s*/)",
         # <dt>基準価額</dt> <dd>数値</dd>
@@ -135,7 +139,7 @@ def parse_price(html: str, debug: bool = False) -> tuple[int | None, str]:
         r'data-price="(\d[\d,]+)"',
         r'data-nav="(\d[\d,]+)"',
         # class が price / value 系の要素（数値が4〜7桁）
-        r'class="[^"]*(?:price|Price|value|Value|nav|NAV)[^"]*"[^>]*>\s*([\d,]{4,8})\s*<',
+        r'class="[^"]*(?:fprice|price|Price|value|Value|nav|NAV)[^"]*"[^>]*>\s*([\d,]{4,8})\s*<',
         # 円マーク付き
         r"¥\s*([\d,]{4,8})",
     ]
@@ -151,12 +155,9 @@ def parse_price(html: str, debug: bool = False) -> tuple[int | None, str]:
 
     if debug:
         print("    [parse_price] 価格を検出できませんでした")
-        # ページの先頭と基準価額周辺を出力して構造を確認
         snippet = html[:3000].replace("\r", "").replace("\n", " ")
         print(f"    [HTML先頭3000字] {snippet!r}")
-        import re as _re
-        # 数値パターンを全抽出
-        nums = _re.findall(r"\d{1,3}(?:,\d{3})+", html)
+        nums = re.findall(r"\d{1,3}(?:,\d{3})+", html)
         print(f"    [X,XXX形式の数値] {nums[:30]}")
 
     return None, ""
@@ -170,10 +171,9 @@ def _fetch_html(url: str, retries: int = 3) -> tuple[int, str]:
     for attempt in range(1, retries + 1):
         try:
             r = SESSION.get(url, timeout=20, allow_redirects=True)
-            # Morningstar 等 日本語サイトは EUC-JP の場合があるため多重試行
             content_type = r.headers.get("Content-Type", "").lower()
             if "charset=" in content_type:
-                html = r.text  # requests が自動デコード
+                html = r.text
             else:
                 html = None
                 for enc in ("utf-8", "euc-jp", "cp932", "shift-jis"):
@@ -195,18 +195,133 @@ def _fetch_html(url: str, retries: int = 3) -> tuple[int, str]:
     raise last_exc
 
 
-def fetch_nav(fund_code: str, debug: bool = False) -> dict | None:
+def _fetch_bytes(url: str, retries: int = 3) -> tuple[int, bytes]:
+    """URL をフェッチして (status_code, bytes) を返す。"""
+    last_exc = None
+    for attempt in range(1, retries + 1):
+        try:
+            r = SESSION.get(url, timeout=30, allow_redirects=True)
+            return r.status_code, r.content
+        except (requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout) as e:
+            last_exc = e
+            if attempt < retries:
+                wait = 2 ** attempt
+                print(f"      リトライ {attempt}/{retries-1} ({wait}s後)…", file=sys.stderr)
+                time.sleep(wait)
+    raise last_exc
+
+
+def _fetch_toushin_csv(isin: str, code: str, debug: bool = False) -> dict | None:
     """
-    ファンドコードから基準価額を取得する。
-    複数ソースを順番に試し、最初に成功したものを返す。
+    投信総合検索ライブラリーから基準価額 CSV をダウンロードし最新値を返す。
+    CSV は Shift-JIS (cp932) エンコード、日次データ、最終行が最新。
+    列: 年月日, 基準価額(円), 純資産総額（百万円）, 分配金（円）
     """
+    url = (
+        f"https://toushin-lib.fwg.ne.jp/FdsWeb/FDST030000/csv-file-download"
+        f"?isinCd={isin}&associFundCd={code}"
+    )
+    source = "投信ライブラリー"
+    if debug:
+        print(f"    [{source}] GET {url}")
+    try:
+        status, raw = _fetch_bytes(url)
+        if debug:
+            print(f"    [{source}] HTTP {status}  size={len(raw)} bytes")
+        if status != 200:
+            print(f"    [{source}] HTTP {status} — スキップ", file=sys.stderr)
+            return None
+
+        # エンコード検出
+        text = None
+        for enc in ("cp932", "shift-jis", "utf-8"):
+            try:
+                text = raw.decode(enc)
+                break
+            except (UnicodeDecodeError, LookupError):
+                continue
+        if text is None:
+            text = raw.decode("utf-8", errors="replace")
+
+        reader = csv.reader(io.StringIO(text))
+        rows = [r for r in reader if any(c.strip() for c in r)]
+        if len(rows) < 2:
+            if debug:
+                print(f"    [{source}] CSV 行数不足: {len(rows)}")
+            return None
+
+        header = rows[0]
+        if debug:
+            print(f"    [{source}] ヘッダー: {header}")
+            print(f"    [{source}] 最終行: {rows[-1]}")
+
+        # 列インデックスを探す
+        price_col = next(
+            (i for i, h in enumerate(header) if "基準価額" in h), None
+        )
+        date_col = next(
+            (i for i, h in enumerate(header)
+             if "年月日" in h or "日付" in h or h.lower() in ("date",)),
+            None,
+        )
+
+        if price_col is None:
+            if debug:
+                print(f"    [{source}] 「基準価額」列が見つかりません: {header}")
+            return None
+
+        last = rows[-1]
+        price_raw = last[price_col].strip() if price_col < len(last) else ""
+        price = _to_price(price_raw)
+        if not price:
+            if debug:
+                print(f"    [{source}] 価格変換失敗: {price_raw!r}")
+            return None
+
+        date_str = ""
+        if date_col is not None and date_col < len(last):
+            date_raw = last[date_col].strip()
+            dm = re.search(r"(\d{4})[年/](\d{1,2})[月/](\d{1,2})", date_raw)
+            if dm:
+                date_str = (
+                    f"{dm.group(1)}-{int(dm.group(2)):02d}-{int(dm.group(3)):02d}"
+                )
+
+        return {"price": price, "date": date_str, "source": source}
+
+    except Exception as e:
+        print(f"    [{source}] エラー: {e}", file=sys.stderr)
+        if debug:
+            import traceback
+            traceback.print_exc()
+        return None
+
+
+def fetch_nav(fund_code: str, isin: str = "", debug: bool = False) -> dict | None:
+    """
+    ファンドコード・ISINから基準価額を取得する。
+    ISIN が設定されていれば投信ライブラリー CSV を最初に試す。
+    """
+
+    # ── 1. 投信総合検索ライブラリー CSV（最優先・最も確実） ────────────────
+    if isin:
+        data = _fetch_toushin_csv(isin, fund_code, debug)
+        if data:
+            print(
+                f"    [投信ライブラリー] ¥{data['price']:,}/万口"
+                + (f"  ({data['date']})" if data["date"] else "")
+            )
+            return data
+        print(f"    [投信ライブラリー] 失敗 — HTML ソースを試みます", file=sys.stderr)
+        time.sleep(1)
+
+    # ── 2. HTML スクレイピング（フォールバック） ────────────────────────────
     sources = [
-        # ウエルスアドバイザー（旧モーニングスター Japan — 同一システム、ドメインのみ変更）
         (
-            "ウエルスアドバイザー",
-            f"https://www.wealthadvisor.co.jp/FundData/SnapShot.do?fnc={fund_code}",
+            "Yahoo Finance JP",
+            f"https://finance.yahoo.co.jp/quote/{fund_code}",
         ),
-        # みんかぶ
         (
             "みんかぶ",
             f"https://minkabu.jp/fund/{fund_code}",
@@ -252,7 +367,7 @@ def fetch_nav(fund_code: str, debug: bool = False) -> dict | None:
         except Exception as e:
             print(f"    [{source_name}] エラー: {e}", file=sys.stderr)
 
-        time.sleep(1.5)  # ソース間のウェイト
+        time.sleep(1.5)
 
     return None
 
@@ -264,7 +379,7 @@ def main() -> None:
     parser.add_argument(
         "--debug",
         action="store_true",
-        help="HTML を dump してパース過程を表示する",
+        help="詳細ログを出力し HTML/CSV を dump する",
     )
     args = parser.parse_args()
 
@@ -278,7 +393,6 @@ def main() -> None:
         sys.exit(1)
 
     config = json.loads(config_path.read_text(encoding="utf-8"))
-    # _comment キーや _note を持つ要素を除外
     fund_list = [
         f for f in config.get("funds", [])
         if f.get("code") and f.get("name") and not f.get("_note")
@@ -288,7 +402,8 @@ def main() -> None:
         print("fund_codes.json にファンドが登録されていません。", file=sys.stderr)
         sys.exit(0)
 
-    print(f"取得対象: {len(fund_list)} 銘柄\n")
+    isin_count = sum(1 for f in fund_list if f.get("isin"))
+    print(f"取得対象: {len(fund_list)} 銘柄（うち ISIN 設定済み: {isin_count} 銘柄）\n")
 
     # ── 既存 prices.json を読み込む（前回値保持用） ──────────────────────────
     out_path = ROOT / "prices.json"
@@ -307,16 +422,16 @@ def main() -> None:
 
     for entry in fund_list:
         code = entry["code"].strip()
+        isin = entry.get("isin", "").strip()
         name = entry["name"].strip()
         print(f"  {name}  ({code})")
 
-        data = fetch_nav(code, debug=args.debug)
+        data = fetch_nav(code, isin=isin, debug=args.debug)
 
         if data:
             results[name] = {"price": data["price"], "date": data["date"], "code": code}
         else:
             failed.append(name)
-            # 前回値を stale フラグ付きで保持
             if name in prev_prices:
                 results[name] = {**prev_prices[name], "stale": True}
                 print(
@@ -327,7 +442,7 @@ def main() -> None:
                 print(f"    ✗ 取得失敗（前回値なし）", file=sys.stderr)
 
         print()
-        time.sleep(2)  # ファンド間のウェイト（レート制限対策）
+        time.sleep(2)
 
     # ── 結果を prices.json に保存 ─────────────────────────────────────────────
     output = {
@@ -345,9 +460,9 @@ def main() -> None:
     if failed and len(failed) == len(fund_list):
         print(
             "\n全銘柄の取得に失敗しました。\n"
-            "  --debug オプションで HTML を確認してください:\n"
+            "  --debug オプションで詳細を確認してください:\n"
             "    python scripts/fetch_prices.py --debug\n"
-            "  ネットワーク制限がある場合はデータソースのURLを確認してください。",
+            "  ISINコードが fund_codes.json に正しく設定されているか確認してください。",
             file=sys.stderr,
         )
         sys.exit(1)
