@@ -60,6 +60,41 @@ jobs:
           echo "=== fetch step outcome: ${{ steps.fetch.outcome }} ==="
           echo "=== prices.json の内容 ==="
           cat prices.json
+          echo ""
+          echo "=== モーニングスター HTML 診断 ==="
+          python3 - <<'PYEOF'
+import glob, re
+
+for path in sorted(glob.glob("debug_*モーニングスター*.html"))[:1]:
+    raw = open(path, "rb").read()
+    print(f"ファイル: {path}")
+    print(f"サイズ: {len(raw)} bytes")
+    print(f"先頭バイト (hex): {raw[:20].hex()}")
+
+    # エンコーディングを試す
+    for enc in ("utf-8", "euc-jp", "shift-jis", "cp932"):
+        try:
+            html = raw.decode(enc)
+            # 「基準価額」周辺100文字を表示
+            m = re.search(r".{0,60}(?:基準価額|基準|価額).{0,120}", html)
+            if m:
+                print(f"\n[{enc}] 基準価額周辺: {m.group()!r}")
+                break
+            else:
+                print(f"[{enc}] デコードOKだが「基準価額」が見つからず")
+        except Exception as e:
+            print(f"[{enc}] デコード失敗: {e}")
+
+    # 数値パターン検索
+    for enc in ("utf-8", "euc-jp", "shift-jis"):
+        try:
+            html = raw.decode(enc, errors="replace")
+            nums = re.findall(r"\d{1,3}(?:,\d{3})+", html)
+            print(f"\n[{enc}] ページ内の「X,XXX」形式の数値: {nums[:20]}")
+            break
+        except Exception:
+            pass
+PYEOF
 
       - name: デバッグ用 HTML を artifact に保存
         if: ${{ inputs.debug == true }}
