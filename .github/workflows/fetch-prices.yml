@@ -26,9 +26,10 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
+          cache-dependency-path: 'requirements.txt'
 
       - name: 依存ライブラリをインストール
-        run: pip install requests
+        run: pip install -r requirements.txt
 
       - name: 基準価額を取得
         run: |
