@@ -3,11 +3,12 @@
 基準価額自動取得スクリプト
 
 データソース（優先順）:
-  1. Yahoo Finance Japan  https://finance.yahoo.co.jp/fund/detail/{code}
+  1. ウエルスアドバイザー  https://www.wealthadvisor.co.jp/FundData/SnapShot.do?fnc={code}
+     （旧モーニングスター Japan — 同一システム、ドメインのみ変更）
   2. みんかぶ             https://minkabu.jp/fund/{code}
 
-ファンドコードの確認: https://www.toushin.or.jp/statistics/detail/
-  → 銘柄名で検索 → 8文字のコードを fund_codes.json に登録
+ファンドコードの確認: https://toushin-lib.fwg.ne.jp/FdsWeb/
+  → 銘柄名で検索 → 8文字の投資信託協会コードを fund_codes.json に登録
 
 トラブルシュート:
   python scripts/fetch_prices.py --debug  # HTML を dump して確認
@@ -124,6 +125,8 @@ def parse_price(html: str, debug: bool = False) -> tuple[int | None, str]:
 
     # ── 2. HTML テキストパターン ─────────────────────────────────────────────
     HTML_PATTERNS = [
+        # wealthadvisor.co.jp の <span class="fprice">
+        r'class=["\']fprice["\'][^>]*>\s*([\d,]{4,8})',
         # 「基準価額」直後の数値
         r"基準価額[^<\d]{0,20}(\d[\d,]{3,7})(?:\s*円|\s*<|\s*/)",
         # <dt>基準価額</dt> <dd>数値</dd>
@@ -198,15 +201,10 @@ def fetch_nav(fund_code: str, debug: bool = False) -> dict | None:
     複数ソースを順番に試し、最初に成功したものを返す。
     """
     sources = [
-        # モーニングスター Japan（最も安定した無料ソース）
+        # ウエルスアドバイザー（旧モーニングスター Japan — 同一システム、ドメインのみ変更）
         (
-            "モーニングスター",
-            f"https://www.morningstar.co.jp/FundData/SnapShot.do?fnc={fund_code}",
-        ),
-        # 旧 Yahoo Finance Japan（fund/detail は 404 なため stocks サブドメインを使用）
-        (
-            "Yahoo Finance JP (stocks)",
-            f"https://stocks.finance.yahoo.co.jp/fund/detail/fund.html?code={fund_code}",
+            "ウエルスアドバイザー",
+            f"https://www.wealthadvisor.co.jp/FundData/SnapShot.do?fnc={fund_code}",
         ),
         # みんかぶ
         (
