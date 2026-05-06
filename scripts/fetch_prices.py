@@ -179,10 +179,17 @@ def fetch_nav(fund_code: str, debug: bool = False) -> dict | None:
     複数ソースを順番に試し、最初に成功したものを返す。
     """
     sources = [
+        # モーニングスター Japan（最も安定した無料ソース）
         (
-            "Yahoo Finance Japan",
-            f"https://finance.yahoo.co.jp/fund/detail/{fund_code}",
+            "モーニングスター",
+            f"https://www.morningstar.co.jp/FundData/SnapShot.do?fnc={fund_code}",
         ),
+        # 旧 Yahoo Finance Japan（fund/detail は 404 なため stocks サブドメインを使用）
+        (
+            "Yahoo Finance JP (stocks)",
+            f"https://stocks.finance.yahoo.co.jp/fund/detail/fund.html?code={fund_code}",
+        ),
+        # みんかぶ
         (
             "みんかぶ",
             f"https://minkabu.jp/fund/{fund_code}",
