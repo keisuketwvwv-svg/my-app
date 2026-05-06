@@ -15,7 +15,7 @@ jobs:
   fetch-prices:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # prices.json をコミットするために必要
+      contents: write
 
     steps:
       - name: リポジトリをチェックアウト
@@ -31,7 +31,20 @@ jobs:
       - name: 依存ライブラリをインストール
         run: pip install -r requirements.txt
 
+      - name: 接続テスト（ネットワーク疎通確認）
+        run: |
+          echo "=== curl で Yahoo Finance Japan に接続テスト ==="
+          curl -s -o /dev/null -w "Yahoo Finance JP: HTTP %{http_code}\n" \
+            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+            "https://finance.yahoo.co.jp/fund/detail/0331418A" || true
+          echo "=== curl で みんかぶ に接続テスト ==="
+          curl -s -o /dev/null -w "Minkabu: HTTP %{http_code}\n" \
+            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+            "https://minkabu.jp/fund/0331418A" || true
+
       - name: 基準価額を取得
+        id: fetch
+        continue-on-error: true
         run: |
           if [ "${{ inputs.debug }}" = "true" ]; then
             python scripts/fetch_prices.py --debug
@@ -39,15 +52,24 @@ jobs:
             python scripts/fetch_prices.py
           fi
 
+      - name: 取得結果を表示
+        if: always()
+        run: |
+          echo "=== fetch step outcome: ${{ steps.fetch.outcome }} ==="
+          echo "=== prices.json の内容 ==="
+          cat prices.json
+
       - name: デバッグ用 HTML を artifact に保存
         if: ${{ inputs.debug == true }}
         uses: actions/upload-artifact@v4
         with:
           name: debug-html
           path: debug_*.html
+          if-no-files-found: ignore
           retention-days: 3
 
       - name: prices.json をコミット・プッシュ
+        if: always()
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
