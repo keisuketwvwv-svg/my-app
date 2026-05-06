@@ -39,15 +39,13 @@ SESSION.headers.update({
     ),
     "Accept": (
         "text/html,application/xhtml+xml,application/xml;"
-        "q=0.9,image/avif,image/webp,*/*;q=0.8"
+        "q=0.9,*/*;q=0.8"
     ),
     "Accept-Language": "ja,en-US;q=0.7,en;q=0.3",
-    "Accept-Encoding": "gzip, deflate, br",
+    # br(brotli)を除外 — requests は brotli パッケージなしでは展開不可
+    # gzip/deflate は urllib3 が自動展開する
+    "Accept-Encoding": "gzip, deflate",
     "Connection": "keep-alive",
-    "Upgrade-Insecure-Requests": "1",
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "none",
 })
 
 
