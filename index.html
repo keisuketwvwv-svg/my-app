@@ -1119,7 +1119,14 @@ const SETTINGS_KEY = 'tokushi_settings_v1';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let funds    = [];
-let history  = [];   // time-series snapshots
+let history     = [];   // 手動スナップショット（localStorage）
+let autoHistory = [];   // price_history.json から自動生成
+
+function combinedHistory() {
+    const manualDates = new Set(history.map(h => h.date));
+    const filtered = autoHistory.filter(h => !manualDates.has(h.date));
+    return [...history, ...filtered].sort((a, b) => a.date.localeCompare(b.date));
+}
 let settings = { goalAmount: 0, startDate: '', principal: 0 };
 let editId   = null;
 let _fundGroups = [];  // grouped by name, cached for price input handler
@@ -1766,10 +1773,11 @@ function deleteHistEntry(date) {
 
 function renderHistory() {
     const chartsEl = $('histCharts');
-    if (history.length >= 2) {
+    const combined = combinedHistory();
+    if (combined.length >= 2) {
         chartsEl.classList.remove('hidden');
         renderHistoryCharts();
-    } else if (history.length < 2) {
+    } else {
         chartsEl.classList.add('hidden');
         if (chartValueLine) { chartValueLine.destroy(); chartValueLine = null; }
         if (chartPnLLine)   { chartPnLLine.destroy();   chartPnLLine   = null; }
@@ -1779,29 +1787,34 @@ function renderHistory() {
 
 function renderHistTable() {
     const tbody = $('histTableBody');
-    if (history.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px 10px;color:var(--text-muted);font-size:13px;">まだ記録がありません<br><small>「今日のデータを記録」を押してスナップショットを保存できます</small></td></tr>';
+    const combined = combinedHistory();
+    if (combined.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px 10px;color:var(--text-muted);font-size:13px;">まだ記録がありません<br><small>「今日のデータを記録」か自動取得で履歴が作成されます</small></td></tr>';
         return;
     }
-    tbody.innerHTML = [...history].reverse().map(h => {
+    tbody.innerHTML = [...combined].reverse().map(h => {
         const cls = h.pnl > 0 ? 'gain' : h.pnl < 0 ? 'loss' : 'zero';
+        const action = h.auto
+            ? `<span style="font-size:10px;color:var(--text-muted);padding:2px 5px;background:var(--bg);border-radius:4px;">自動</span>`
+            : `<button class="btn-hist-del" onclick="deleteHistEntry('${h.date}')">削除</button>`;
         return `
         <tr>
             <td>${h.date}</td>
             <td class="hist-value">${yen(h.value)}</td>
             <td class="hist-pnl ${cls}">${pnlStr(h.pnl)}</td>
             <td class="hist-rate ${cls}">${rateStr(h.rate)}</td>
-            <td><button class="btn-hist-del" onclick="deleteHistEntry('${h.date}')">削除</button></td>
+            <td>${action}</td>
         </tr>`;
     }).join('');
 }
 
 function renderHistoryCharts() {
-    const labels    = history.map(h => { const d = new Date(h.date); return `${d.getMonth()+1}/${d.getDate()}`; });
-    const longLabels = history.map(h => h.date);
-    const values    = history.map(h => h.value);
-    const pnls      = history.map(h => h.pnl);
-    const ptRadius  = history.length > 30 ? 2 : 4;
+    const combined  = combinedHistory();
+    const labels    = combined.map(h => { const d = new Date(h.date); return `${d.getMonth()+1}/${d.getDate()}`; });
+    const longLabels = combined.map(h => h.date);
+    const values    = combined.map(h => h.value);
+    const pnls      = combined.map(h => h.pnl);
+    const ptRadius  = combined.length > 30 ? 2 : 4;
 
     const xAxis = {
         grid:   { color: '#e2e8f0' },
@@ -1886,10 +1899,11 @@ function renderHistoryCharts() {
 
 // ── History CSV Export ──────────────────────────────────────────────────────
 function exportHistCSV() {
-    if (history.length === 0) { alert('エクスポートするデータがありません'); return; }
+    const combined = combinedHistory();
+    if (combined.length === 0) { alert('エクスポートするデータがありません'); return; }
 
     const headers = ['日付', '総評価額（円）', '総取得額（円）', '損益額（円）', '損益率（%）'];
-    const rows = [...history].reverse().map(h => [h.date, h.value, h.cost, h.pnl, h.rate]);
+    const rows = [...combined].reverse().map(h => [h.date, h.value, h.cost, h.pnl, h.rate]);
 
     const csv = [headers, ...rows]
         .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
@@ -1909,6 +1923,49 @@ function exportHistCSV() {
     URL.revokeObjectURL(a.href);
 
     showToast('📥 推移CSVを出力しました');
+}
+
+// ── Auto History Build (price_history.json) ────────────────────────────────
+function buildAutoHistory(data) {
+    if (funds.length === 0) return;
+    const hist = data.history || {};
+    const totalCost = funds.reduce((s, f) => s + calcFund(f).cost, 0);
+    if (totalCost <= 0) return;
+
+    const entries = [];
+    for (const [date, prices] of Object.entries(hist)) {
+        let totalValue = 0;
+        let covered = 0;
+        funds.forEach(f => {
+            const p = prices[f.name];
+            if (p) { totalValue += (f.qty * p) / 10000; covered++; }
+        });
+        if (covered === 0) continue;
+        const pnl  = totalValue - totalCost;
+        const rate = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+        entries.push({
+            date,
+            value: Math.round(totalValue),
+            cost:  Math.round(totalCost),
+            pnl:   Math.round(pnl),
+            rate:  parseFloat(rate.toFixed(2)),
+            auto:  true,
+        });
+    }
+    autoHistory = entries.sort((a, b) => a.date.localeCompare(b.date));
+    renderHistory();
+}
+
+async function loadPriceHistory() {
+    try {
+        const resp = await fetch(
+            'https://raw.githubusercontent.com/keisuketwvwv-svg/my-app/main/price_history.json?' + Date.now()
+        );
+        if (!resp.ok) return;
+        buildAutoHistory(await resp.json());
+    } catch (e) {
+        console.warn('price_history.json の読み込みに失敗:', e);
+    }
 }
 
 // ── Auto Price Load (prices.json) ──────────────────────────────────────────
@@ -2028,7 +2085,7 @@ function generateMonthlyReport() {
     const totalRate = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
 
     // Monthly snapshots
-    const monthSnaps = history.filter(h => h.date.startsWith(monthPfx));
+    const monthSnaps = combinedHistory().filter(h => h.date.startsWith(monthPfx));
     const startSnap  = monthSnaps.length > 0 ? monthSnaps[0] : null;
     const endSnap    = monthSnaps.length > 1 ? monthSnaps[monthSnaps.length - 1] : null;
 
@@ -2242,6 +2299,8 @@ applySectionStates();
 applySettingsToInputs();
 // prices.json が存在すれば自動で価格を反映（失敗してもエラーにならない）
 loadPricesJSON(false);
+// 日次価格履歴を読み込んで資産推移グラフを自動生成
+loadPriceHistory();
 </script>
 
 </body>

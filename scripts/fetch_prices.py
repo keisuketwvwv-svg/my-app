@@ -454,6 +454,33 @@ def main() -> None:
         encoding="utf-8",
     )
 
+    # ── price_history.json を更新（日次蓄積）────────────────────────────────
+    hist_path = ROOT / "price_history.json"
+    hist_data: dict = {}
+    if hist_path.exists():
+        try:
+            hist_data = json.loads(
+                hist_path.read_text(encoding="utf-8")
+            ).get("history", {})
+        except Exception:
+            pass
+
+    # 取得成功した銘柄を基準価額の日付でグループ化して追記
+    for name, data in results.items():
+        if data.get("stale"):
+            continue
+        price_date = data.get("date") or now_jst.strftime("%Y-%m-%d")
+        if price_date not in hist_data:
+            hist_data[price_date] = {}
+        hist_data[price_date][name] = data["price"]
+
+    hist_path.write_text(
+        json.dumps({"history": hist_data}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    latest_date = max(hist_data.keys()) if hist_data else "-"
+    print(f"  → price_history.json を更新（最新: {latest_date}、累計 {len(hist_data)} 日分）")
+
     success = len(results) - len([v for v in results.values() if v.get("stale")])
     print(f"完了: {success}/{len(fund_list)} 銘柄を取得 → prices.json を更新")
 
