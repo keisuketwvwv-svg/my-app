@@ -415,6 +415,21 @@
         }
         .btn-hist-del:hover { opacity: 0.8; }
 
+        .auto-hist-badge {
+            display: inline-block; font-size: 11px; font-weight: 700;
+            padding: 2px 8px; border-radius: 20px;
+            background: #f0fdf4; color: #047857; border: 1px solid #bbf7d0;
+            white-space: nowrap;
+        }
+
+        .edit-qty-inp {
+            width: 100%; padding: 6px 8px;
+            border: 1.5px solid var(--border); border-radius: 6px;
+            font-size: 13px; font-family: inherit; color: var(--text);
+            transition: border-color 0.15s;
+        }
+        .edit-qty-inp:focus { outline: none; border-color: var(--primary); }
+
         /* ── 内訳ポップアップ ── */
         .detail-summary {
             display: grid; grid-template-columns: repeat(3, 1fr);
@@ -941,7 +956,9 @@ const SETTINGS_KEY = 'tokushi_settings_v1';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let funds    = [];
-let history  = [];   // time-series snapshots
+let history  = [];          // 手動スナップショット（localStorage）
+let autoHistory   = [];     // price_history.json から自動生成
+let priceHistData = {};     // price_history.json の生データ（編集時に参照）
 let settings = { goalAmount: 0, startDate: '', principal: 0 };
 let editId   = null;
 let _fundGroups = [];  // grouped by name, cached for price input handler
@@ -1616,6 +1633,54 @@ function recordSnapshot() {
     renderHistory();
 }
 
+// ── Auto History (price_history.json × 現在の保有口数) ────────────────────
+function combinedHistory() {
+    const manualDates = new Set(history.map(h => h.date));
+    return [...history, ...autoHistory.filter(h => !manualDates.has(h.date))]
+        .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function buildAutoHistory(data) {
+    autoHistory = [];
+    Object.entries(data).forEach(([date, prices]) => {
+        if (funds.length === 0) return;
+        let totalCost = 0, totalValue = 0;
+        const breakdown = [];
+        funds.forEach(f => {
+            const cur = prices[f.name];
+            if (cur == null) return;
+            const cost  = (f.qty * f.acq) / 10000;
+            const value = (f.qty * cur) / 10000;
+            const pnl   = value - cost;
+            const rate  = cost > 0 ? (pnl / cost) * 100 : 0;
+            totalCost  += cost;
+            totalValue += value;
+            breakdown.push({ name: f.name, account: f.account, qty: f.qty, acq: f.acq, cur,
+                cost: Math.round(cost), value: Math.round(value),
+                pnl: Math.round(pnl), rate: parseFloat(rate.toFixed(2)) });
+        });
+        if (breakdown.length === 0) return;
+        const pnl  = totalValue - totalCost;
+        const rate = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+        autoHistory.push({ date, auto: true,
+            value: Math.round(totalValue), cost: Math.round(totalCost),
+            pnl: Math.round(pnl), rate: parseFloat(rate.toFixed(2)), funds: breakdown });
+    });
+    autoHistory.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+async function loadPriceHistory() {
+    try {
+        const url = 'https://raw.githubusercontent.com/keisuketwvwv-svg/my-app/main/price_history.json?' + Date.now();
+        const resp = await fetch(url);
+        if (!resp.ok) return;
+        const json = await resp.json();
+        priceHistData = json.history || {};
+        buildAutoHistory(priceHistData);
+        renderHistory();
+    } catch(e) { /* 失敗時は静かに無視 */ }
+}
+
 function deleteHistEntry(date) {
     if (!confirm(`${date} の記録を削除しますか？`)) return;
     history = history.filter(h => h.date !== date);
@@ -1625,7 +1690,7 @@ function deleteHistEntry(date) {
 
 // ── History Period Aggregation ─────────────────────────────────────────────
 function aggregateHistory(period) {
-    const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
+    const sorted = combinedHistory();
     if (period === 'daily') return sorted;
     const groups = new Map();
     sorted.forEach(h => {
@@ -1648,7 +1713,7 @@ function histLabel(h) {
 function renderHistory() {
     const data = aggregateHistory(histPeriod);
     const chartsEl = $('histCharts');
-    if (data.length >= 2) {
+    if (combinedHistory().length >= 2) {
         chartsEl.classList.remove('hidden');
         renderHistoryCharts(data);
     } else {
@@ -1666,8 +1731,11 @@ function renderHistTable(data) {
     }
     tbody.innerHTML = [...data].reverse().map(h => {
         const cls = h.pnl > 0 ? 'gain' : h.pnl < 0 ? 'loss' : 'zero';
-        const delBtn = histPeriod === 'daily'
-            ? `<button class="btn-hist-del" onclick="event.stopPropagation();deleteHistEntry('${h.date}')">削除</button>`
+        const isAuto = h.auto && !history.find(m => m.date === h.date);
+        const actionCell = histPeriod === 'daily'
+            ? isAuto
+                ? `<span class="auto-hist-badge">自動</span>`
+                : `<button class="btn-hist-del" onclick="event.stopPropagation();deleteHistEntry('${h.date}')">削除</button>`
             : '';
         return `
         <tr class="hist-row" onclick="openHistDetail('${h.date}')">
@@ -1675,7 +1743,7 @@ function renderHistTable(data) {
             <td class="hist-value">${yen(h.value)}</td>
             <td class="hist-pnl ${cls}">${pnlStr(h.pnl)}</td>
             <td class="hist-rate ${cls}">${rateStr(h.rate)}</td>
-            <td>${delBtn}</td>
+            <td>${actionCell}</td>
         </tr>`;
     }).join('');
 }
@@ -2114,24 +2182,16 @@ $('overlay').addEventListener('click', e => {
 
 // ── History Detail Popup ───────────────────────────────────────────────────
 function openHistDetail(date) {
-    const h = history.find(h => h.date === date);
+    const h = combinedHistory().find(h => h.date === date);
     if (!h) return;
-    $('histDetailTitle').textContent = `📅 ${date} の内訳`;
+    const isAuto = h.auto && !history.find(m => m.date === date);
+    $('histDetailTitle').textContent = `📅 ${date} の内訳${isAuto ? '（自動）' : ''}`;
     const valueCls = h.pnl >= 0 ? 'gain' : 'loss';
     let content = `
         <div class="detail-summary">
-            <div class="detail-stat">
-                <div class="ds-label">総評価額</div>
-                <div class="ds-value">${yen(h.value)}</div>
-            </div>
-            <div class="detail-stat">
-                <div class="ds-label">損益額</div>
-                <div class="ds-value" style="color:var(--${valueCls})">${pnlStr(h.pnl)}</div>
-            </div>
-            <div class="detail-stat">
-                <div class="ds-label">損益率</div>
-                <div class="ds-value" style="color:var(--${valueCls})">${rateStr(h.rate)}</div>
-            </div>
+            <div class="detail-stat"><div class="ds-label">総評価額</div><div class="ds-value">${yen(h.value)}</div></div>
+            <div class="detail-stat"><div class="ds-label">損益額</div><div class="ds-value" style="color:var(--${valueCls})">${pnlStr(h.pnl)}</div></div>
+            <div class="detail-stat"><div class="ds-label">損益率</div><div class="ds-value" style="color:var(--${valueCls})">${rateStr(h.rate)}</div></div>
         </div>`;
     if (h.funds && h.funds.length > 0) {
         const rows = h.funds.map(f => {
@@ -2152,8 +2212,143 @@ function openHistDetail(date) {
     } else {
         content += `<div class="detail-no-data">この記録には銘柄内訳データがありません<br><small>（新しい記録から内訳が保存されます）</small></div>`;
     }
+    content += `<div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn-save" style="flex:1" onclick="openHistEdit('${date}')">✏️ 内訳を編集</button>
+        <button class="btn-cancel" style="flex:1;margin:0" onclick="$('histDetailOverlay').classList.add('hidden')">閉じる</button>
+    </div>`;
     $('histDetailContent').innerHTML = content;
     $('histDetailOverlay').classList.remove('hidden');
+}
+
+// ── History Edit (内訳編集) ───────────────────────────────────────────────
+function openHistEdit(date) {
+    const h = combinedHistory().find(h => h.date === date);
+    if (!h) return;
+    const prices = priceHistData[date] || {};
+
+    const fundsToEdit = (h.funds && h.funds.length > 0)
+        ? h.funds
+        : funds.map(f => ({ name: f.name, account: f.account, qty: f.qty, acq: f.acq, cur: prices[f.name] || f.cur }));
+
+    $('histDetailTitle').textContent = `✏️ ${date} の内訳を編集`;
+
+    const rows = fundsToEdit.map((f, i) => {
+        const cur = prices[f.name] != null ? prices[f.name] : f.cur;
+        return `<tr>
+            <td>
+                <div style="font-size:12px;font-weight:600">${esc(f.name)}</div>
+                <div style="margin-top:2px"><span class="pt-badge ${accountCls(f.account)}" style="font-size:9px;padding:1px 5px">${esc(f.account)}</span></div>
+            </td>
+            <td style="text-align:right;font-size:12px;color:var(--text-muted)">¥${cur.toLocaleString()}</td>
+            <td style="width:130px">
+                <input class="edit-qty-inp" type="number" min="0" step="1"
+                    value="${f.qty}" data-idx="${i}"
+                    data-cur="${cur}" data-acq="${f.acq}"
+                    data-name="${esc(f.name)}" data-account="${esc(f.account)}"
+                    oninput="recalcEditTotal()">
+            </td>
+            <td style="text-align:right;font-size:12px;min-width:80px" id="edit-val-${i}">―</td>
+        </tr>`;
+    }).join('');
+
+    $('histDetailContent').innerHTML = `
+        <div style="overflow-x:auto">
+            <table class="detail-tbl" style="margin-bottom:12px">
+                <thead><tr><th>銘柄</th><th>基準価額</th><th>保有口数（口）</th><th>評価額</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+        <div style="background:var(--bg);border-radius:8px;padding:12px 14px;margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+                <span style="color:var(--text-muted)">合計評価額</span>
+                <span id="editTotalValue" style="font-weight:700">―</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px">
+                <span style="color:var(--text-muted)">損益</span>
+                <span id="editTotalPnl" style="font-weight:700">―</span>
+            </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+            <button class="btn-save" style="flex:1" onclick="saveHistEdit('${date}')">💾 保存</button>
+            <button class="btn-cancel" style="flex:1;margin:0" onclick="openHistDetail('${date}')">← 戻る</button>
+        </div>`;
+
+    recalcEditTotal();
+}
+
+function recalcEditTotal() {
+    const inputs = document.querySelectorAll('.edit-qty-inp');
+    let totalCost = 0, totalValue = 0;
+    inputs.forEach((inp, i) => {
+        const qty  = parseFloat(inp.value) || 0;
+        const cur  = parseFloat(inp.dataset.cur) || 0;
+        const acq  = parseFloat(inp.dataset.acq) || 0;
+        const cost  = (qty * acq) / 10000;
+        const value = (qty * cur) / 10000;
+        totalCost  += cost;
+        totalValue += value;
+        const valEl = document.getElementById('edit-val-' + i);
+        if (valEl) valEl.textContent = qty > 0 ? yen(value) : '―';
+    });
+    const pnl  = totalValue - totalCost;
+    const rate = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+    const tvEl = document.getElementById('editTotalValue');
+    const tpEl = document.getElementById('editTotalPnl');
+    if (tvEl) tvEl.textContent = totalValue > 0 ? yen(totalValue) : '―';
+    if (tpEl) {
+        tpEl.textContent = totalValue > 0 ? `${pnlStr(pnl)} (${rateStr(rate)})` : '―';
+        tpEl.style.color = totalValue > 0 ? (pnl >= 0 ? 'var(--gain)' : 'var(--loss)') : '';
+    }
+}
+
+function saveHistEdit(date) {
+    const inputs = document.querySelectorAll('.edit-qty-inp');
+    if (inputs.length === 0) return;
+
+    const breakdown = [];
+    let totalCost = 0, totalValue = 0;
+    inputs.forEach(inp => {
+        const qty     = parseFloat(inp.value) || 0;
+        const cur     = parseFloat(inp.dataset.cur) || 0;
+        const acq     = parseFloat(inp.dataset.acq) || 0;
+        const name    = inp.dataset.name;
+        const account = inp.dataset.account;
+        if (qty <= 0) return;
+        const cost  = (qty * acq) / 10000;
+        const value = (qty * cur) / 10000;
+        const pnl   = value - cost;
+        const rate  = cost > 0 ? (pnl / cost) * 100 : 0;
+        totalCost  += cost;
+        totalValue += value;
+        breakdown.push({ name, account, qty, acq, cur,
+            cost: Math.round(cost), value: Math.round(value),
+            pnl: Math.round(pnl), rate: parseFloat(rate.toFixed(2)) });
+    });
+
+    if (breakdown.length === 0) { alert('保有口数を入力してください'); return; }
+
+    const pnl  = totalValue - totalCost;
+    const rate = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+    const snap = {
+        date,
+        value: Math.round(totalValue),
+        cost:  Math.round(totalCost),
+        pnl:   Math.round(pnl),
+        rate:  parseFloat(rate.toFixed(2)),
+        funds: breakdown
+    };
+
+    const idx = history.findIndex(h => h.date === date);
+    if (idx >= 0) {
+        history[idx] = snap;
+    } else {
+        history.push(snap);
+        history.sort((a, b) => a.date.localeCompare(b.date));
+    }
+    persistHistory();
+    renderHistory();
+    $('histDetailOverlay').classList.add('hidden');
+    showToast('✓ 内訳を保存しました');
 }
 
 // ── History Period Tabs ────────────────────────────────────────────────────
@@ -2173,6 +2368,8 @@ applySectionStates();
 applySettingsToInputs();
 // prices.json が存在すれば自動で価格を反映（失敗してもエラーにならない）
 loadPricesJSON(false);
+// price_history.json から自動履歴を生成（失敗しても静かに無視）
+loadPriceHistory();
 </script>
 
 </body>
