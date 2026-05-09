@@ -344,6 +344,21 @@
         .quota-bd-amount { color: var(--text-muted); font-variant-numeric: tabular-nums; }
         .quota-bd-pct { color: var(--text-muted); font-variant-numeric: tabular-nums; min-width: 42px; text-align: right; }
 
+        /* ── 特定口座 売却時（税引き後）パネル ── */
+        .tokutei-aftertax {
+            background: #fffbeb; border-bottom: 1px solid var(--border);
+            padding: 11px 14px;
+        }
+        .tokutei-aftertax.hidden { display: none; }
+        .ta-title { font-size: 11px; font-weight: 700; color: #92400e; margin-bottom: 8px; letter-spacing: 0.4px; }
+        .ta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .ta-cell { display: flex; flex-direction: column; min-width: 0; }
+        .ta-label { font-size: 10px; color: var(--text-muted); margin-bottom: 2px; font-weight: 600; }
+        .ta-value { font-size: 13px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+        .ta-value.gain { color: var(--gain); }
+        .ta-value.loss { color: var(--loss); }
+        .ta-value.muted { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
         /* ── Fund List ── */
         .fund-list { background: var(--card); }
         .fund-item { padding: 12px 14px; border-bottom: 1px solid var(--border); }
@@ -1132,6 +1147,23 @@
                     </div>
                 </div>
                 <div id="tokuteiBlockBody" class="sec-body">
+                    <div class="tokutei-aftertax hidden" id="tokuteiAfterTax">
+                        <div class="ta-title">💰 売却時（税引き後）</div>
+                        <div class="ta-grid">
+                            <div class="ta-cell">
+                                <div class="ta-label">税引き後評価額</div>
+                                <div class="ta-value" id="tokAtValue">―</div>
+                            </div>
+                            <div class="ta-cell">
+                                <div class="ta-label">税引き後損益</div>
+                                <div class="ta-value" id="tokAtPnl">―</div>
+                            </div>
+                            <div class="ta-cell">
+                                <div class="ta-label">課税額 (20.315%)</div>
+                                <div class="ta-value muted" id="tokAtTax">―</div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="fund-list" id="tokuteiList"></div>
                 </div>
             </div>
@@ -1154,7 +1186,7 @@
                 <div class="dc-body">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                         <div class="dc-meta" id="dcMeta">―</div>
-                        <button class="btn-dc-edit" id="btnDcEdit" onclick="openDcEdit()">✏️ 編集</button>
+                        <button class="btn-sm btn-edit-sm" id="btnDcEdit" onclick="openDcEdit()">編集</button>
                     </div>
                     <div class="dc-summary">
                         <div class="dc-stat"><div class="ds-label">年金資産評価額</div><div class="ds-value" id="dcTotalValue">¥0</div></div>
@@ -1463,20 +1495,31 @@ function renderSummary() {
         tokCost  += c.cost;
         tokValue += c.value;
     });
-    const atSec = $('afterTaxSection');
+    const atSec    = $('afterTaxSection');
+    const tokAtSec = $('tokuteiAfterTax');
     if (tokValue > 0) {
         const tokPnl     = tokValue - tokCost;
         const taxAmount  = Math.max(0, tokPnl) * TAX_RATE;
         const atValue    = tokValue - taxAmount;
         const atPnl      = atValue - tokCost;
+        // ダッシュボード側
         $('afterTaxValue').textContent = yen(atValue);
         $('afterTaxValue').className   = 'after-tax-val' + (atPnl >= 0 ? ' gain' : '');
         $('afterTaxPnl').textContent   = pnlStr(atPnl);
         $('afterTaxPnl').className     = 'after-tax-val' + (atPnl >= 0 ? ' gain' : '');
         $('afterTaxAmount').textContent = '−' + yen(taxAmount);
         atSec.classList.remove('hidden');
+        // 特定口座ブロック側
+        const cls = atPnl > 0 ? 'gain' : atPnl < 0 ? 'loss' : '';
+        $('tokAtValue').textContent = yen(atValue);
+        $('tokAtValue').className   = 'ta-value ' + cls;
+        $('tokAtPnl').textContent   = pnlStr(atPnl);
+        $('tokAtPnl').className     = 'ta-value ' + cls;
+        $('tokAtTax').textContent   = '−' + yen(taxAmount);
+        tokAtSec.classList.remove('hidden');
     } else {
         atSec.classList.add('hidden');
+        tokAtSec.classList.add('hidden');
     }
 
     // ── NISA 枠サマリー ──
@@ -2624,7 +2667,8 @@ function renderDc() {
     headRight.style.display = '';
     $('dcHeadValue').textContent = yen(dcPension.totalValue);
     const hPnl = $('dcHeadPnl');
-    hPnl.textContent = '損益: ' + pnlStr(dcPension.pnl);
+    const dcRate = dcPension.contributions > 0 ? (dcPension.pnl / dcPension.contributions) * 100 : 0;
+    hPnl.textContent = `損益: ${pnlStr(dcPension.pnl)} (${rateStr(dcRate)})`;
     const pnlColor = dcPension.pnl > 0 ? '#6ee7b7' : dcPension.pnl < 0 ? '#fca5a5' : 'rgba(255,255,255,0.75)';
     hPnl.style.color = pnlColor;
 
