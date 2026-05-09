@@ -145,6 +145,26 @@
             border-radius: 4px; transition: width 0.4s ease;
         }
 
+        .after-tax-section {
+            margin-top: 10px; padding: 10px;
+            background: rgba(255,255,255,0.1); border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.18);
+        }
+        .after-tax-section.hidden { display: none; }
+        .after-tax-title {
+            font-size: 10px; opacity: 0.72; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 7px;
+        }
+        .after-tax-row {
+            display: flex; justify-content: space-between; align-items: baseline;
+            margin-bottom: 4px; font-size: 12px;
+        }
+        .after-tax-row:last-child { margin-bottom: 0; }
+        .after-tax-label { opacity: 0.78; }
+        .after-tax-val { font-weight: 700; font-size: 13px; }
+        .after-tax-val.gain { color: #6ee7b7; }
+        .after-tax-val.muted { opacity: 0.65; font-size: 11px; font-weight: 500; }
+
         /* ── Action Bar ── */
         .action-bar { display: flex; flex-direction: column; gap: 5px; }
         .btn-action {
@@ -163,6 +183,15 @@
         .btn-report-act  { background: #f5f3ff; color: #7c3aed;         border-color: #ddd6fe; }
         .btn-backup-act  { background: #fff7ed; color: #c2410c;         border-color: #fed7aa; }
         .btn-restore-act { background: #faf5ff; color: #6d28d9;         border-color: #e9d5ff; }
+
+        .btn-reset-danger {
+            display: block; width: 100%; margin-top: 10px; padding: 7px 12px;
+            background: none; color: #b91c1c; border: 1px solid #fecaca;
+            border-radius: 7px; font-size: 12px; font-weight: 600;
+            cursor: pointer; font-family: inherit; text-align: center;
+            transition: background 0.15s, color 0.15s;
+        }
+        .btn-reset-danger:hover { background: #fef2f2; }
 
         /* ── Settings ── */
         .settings-section {
@@ -624,6 +653,22 @@
                     <div class="progress-fill" id="goalProgressFill" style="width:0%"></div>
                 </div>
             </div>
+            <!-- 特定口座 税引き後 -->
+            <div class="after-tax-section hidden" id="afterTaxSection">
+                <div class="after-tax-title">特定口座 売却時（税引き後）</div>
+                <div class="after-tax-row">
+                    <span class="after-tax-label">税引き後評価額</span>
+                    <span class="after-tax-val" id="afterTaxValue">―</span>
+                </div>
+                <div class="after-tax-row">
+                    <span class="after-tax-label">税引き後損益</span>
+                    <span class="after-tax-val" id="afterTaxPnl">―</span>
+                </div>
+                <div class="after-tax-row">
+                    <span class="after-tax-label muted" style="opacity:0.6;font-size:11px">課税額 (20.315%)</span>
+                    <span class="after-tax-val muted" id="afterTaxAmount">―</span>
+                </div>
+            </div>
         </div>
 
         <!-- Action Bar -->
@@ -642,9 +687,6 @@
             </button>
             <button class="btn-action btn-restore-act" id="btnRestore">
                 <span class="btn-icon-lg">📂</span>バックアップから復元
-            </button>
-            <button class="btn-action btn-reset-act" id="btnReset">
-                <span class="btn-icon-lg">🗑️</span>リセット
             </button>
         </div>
         <input type="file" id="restoreFileInput" accept=".json" style="display:none">
@@ -670,6 +712,7 @@
                         <input type="number" id="inpPrincipal" placeholder="例: 5000000" min="0" step="1">
                     </div>
                     <button class="btn-settings-save" id="btnSettingsSave">設定を保存</button>
+                    <button class="btn-reset-danger" id="btnReset">🗑️ データを全てリセット</button>
                 </div>
             </div>
         </div>
@@ -1096,6 +1139,30 @@ function renderSummary() {
         goalWrap.classList.remove('hidden');
     } else {
         goalWrap.classList.add('hidden');
+    }
+
+    // ── 特定口座 税引き後 ──
+    const TAX_RATE = 0.20315;
+    let tokCost = 0, tokValue = 0;
+    funds.filter(f => f.account === '特定').forEach(f => {
+        const c = calcFund(f);
+        tokCost  += c.cost;
+        tokValue += c.value;
+    });
+    const atSec = $('afterTaxSection');
+    if (tokValue > 0) {
+        const tokPnl     = tokValue - tokCost;
+        const taxAmount  = Math.max(0, tokPnl) * TAX_RATE;
+        const atValue    = tokValue - taxAmount;
+        const atPnl      = atValue - tokCost;
+        $('afterTaxValue').textContent = yen(atValue);
+        $('afterTaxValue').className   = 'after-tax-val' + (atPnl >= 0 ? ' gain' : '');
+        $('afterTaxPnl').textContent   = pnlStr(atPnl);
+        $('afterTaxPnl').className     = 'after-tax-val' + (atPnl >= 0 ? ' gain' : '');
+        $('afterTaxAmount').textContent = '−' + yen(taxAmount);
+        atSec.classList.remove('hidden');
+    } else {
+        atSec.classList.add('hidden');
     }
 }
 
