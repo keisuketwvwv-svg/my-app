@@ -165,6 +165,29 @@
         .after-tax-val.gain { color: #6ee7b7; }
         .after-tax-val.muted { opacity: 0.65; font-size: 11px; font-weight: 500; }
 
+        /* ── NISA ダッシュボード枠サマリー ── */
+        .nisa-dash-quota {
+            margin-top: 10px; padding: 10px;
+            background: rgba(255,255,255,0.1); border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.18);
+        }
+        .nisa-dash-quota.hidden { display: none; }
+        .nisa-dash-title { font-size: 10px; opacity: 0.72; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+        .ndq-row { margin-bottom: 8px; }
+        .ndq-row:last-child { margin-bottom: 0; }
+        .ndq-total-row { padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2); margin-top: 4px; }
+        .ndq-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; margin-bottom: 3px; }
+        .ndq-label { font-weight: 600; opacity: 0.95; }
+        .ndq-limit { font-weight: 400; opacity: 0.6; font-size: 10px; }
+        .ndq-right { font-weight: 700; font-size: 11px; }
+        .ndq-bar { height: 7px; background: rgba(255,255,255,0.2); border-radius: 4px; overflow: hidden; margin-bottom: 3px; }
+        .ndq-fill { height: 100%; border-radius: 4px; transition: width 0.35s; }
+        .ndq-fill.ndq-ts    { background: #34d399; }
+        .ndq-fill.ndq-sc    { background: #c084fc; }
+        .ndq-fill.ndq-total { background: #60a5fa; }
+        .ndq-sub { display: flex; justify-content: space-between; font-size: 10px; opacity: 0.72; }
+        .ndq-sub .ndq-over  { color: #fca5a5; font-weight: 700; opacity: 1; }
+
         /* ── Action Bar ── */
         .action-bar { display: flex; flex-direction: column; gap: 5px; }
         .btn-action {
@@ -815,6 +838,43 @@
                     <span class="after-tax-val muted" id="afterTaxAmount">―</span>
                 </div>
             </div>
+            <!-- NISA 枠サマリー -->
+            <div class="nisa-dash-quota hidden" id="nisaDashQuota">
+                <div class="nisa-dash-title">🌿 NISA 生涯非課税枠</div>
+                <div class="ndq-row">
+                    <div class="ndq-head">
+                        <span class="ndq-label">積立投資枠 <span class="ndq-limit">/ ¥6,000,000</span></span>
+                        <span class="ndq-right"><span id="ndqTsPct">0.0%</span></span>
+                    </div>
+                    <div class="ndq-bar"><div class="ndq-fill ndq-ts" id="ndqTsFill" style="width:0%"></div></div>
+                    <div class="ndq-sub">
+                        <span id="ndqTsUsed">¥0 使用</span>
+                        <span id="ndqTsRemain">残 ¥6,000,000</span>
+                    </div>
+                </div>
+                <div class="ndq-row">
+                    <div class="ndq-head">
+                        <span class="ndq-label">成長投資枠 <span class="ndq-limit">/ ¥12,000,000</span></span>
+                        <span class="ndq-right"><span id="ndqScPct">0.0%</span></span>
+                    </div>
+                    <div class="ndq-bar"><div class="ndq-fill ndq-sc" id="ndqScFill" style="width:0%"></div></div>
+                    <div class="ndq-sub">
+                        <span id="ndqScUsed">¥0 使用</span>
+                        <span id="ndqScRemain">残 ¥12,000,000</span>
+                    </div>
+                </div>
+                <div class="ndq-row ndq-total-row">
+                    <div class="ndq-head">
+                        <span class="ndq-label">合　計 <span class="ndq-limit">/ ¥18,000,000</span></span>
+                        <span class="ndq-right"><span id="ndqTotalPct">0.0%</span></span>
+                    </div>
+                    <div class="ndq-bar"><div class="ndq-fill ndq-total" id="ndqTotalFill" style="width:0%"></div></div>
+                    <div class="ndq-sub">
+                        <span id="ndqTotalUsed">¥0 使用</span>
+                        <span id="ndqTotalRemain">残 ¥18,000,000</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Action Bar -->
@@ -1412,6 +1472,43 @@ function renderSummary() {
     } else {
         atSec.classList.add('hidden');
     }
+
+    // ── NISA 枠サマリー ──
+    renderNisaDashQuota();
+}
+
+function renderNisaDashQuota() {
+    const tsUsed  = funds.filter(f => f.account === '新NISA積立').reduce((s, f) => s + calcFund(f).cost, 0);
+    const scUsed  = funds.filter(f => f.account === '新NISA成長').reduce((s, f) => s + calcFund(f).cost, 0);
+    const total   = tsUsed + scUsed;
+    const el      = $('nisaDashQuota');
+
+    if (tsUsed === 0 && scUsed === 0) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+
+    const TS_LIMIT    = NISA_LIMITS['新NISA積立'];  // 600万
+    const SC_LIMIT    = NISA_LIMITS['新NISA成長'];  // 1200万
+    const TOTAL_LIMIT = NISA_TOTAL_LIMIT;           // 1800万
+
+    function setRow(fillId, pctId, usedId, remainId, used, limit) {
+        const pct  = Math.min(100, (used / limit) * 100);
+        const rem  = limit - used;
+        $(fillId).style.width    = pct.toFixed(2) + '%';
+        $(pctId).textContent     = pct.toFixed(1) + '%';
+        $(usedId).textContent    = yen(used) + ' 使用';
+        const remEl = $(remainId);
+        if (rem < 0) {
+            remEl.textContent  = '超過 ' + yen(-rem);
+            remEl.className    = 'ndq-over';
+        } else {
+            remEl.textContent  = '残 ' + yen(rem);
+            remEl.className    = '';
+        }
+    }
+
+    setRow('ndqTsFill',    'ndqTsPct',    'ndqTsUsed',    'ndqTsRemain',    tsUsed, TS_LIMIT);
+    setRow('ndqScFill',    'ndqScPct',    'ndqScUsed',    'ndqScRemain',    scUsed, SC_LIMIT);
+    setRow('ndqTotalFill', 'ndqTotalPct', 'ndqTotalUsed', 'ndqTotalRemain', total,  TOTAL_LIMIT);
 }
 
 function renderNisaQuota(acType, containerId) {
