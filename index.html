@@ -355,6 +355,19 @@
         .history-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
         .history-charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
+        /* ── History Period Tabs ── */
+        .hist-period-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+        .hist-tab {
+            padding: 5px 16px; border-radius: 20px;
+            font-size: 12px; font-weight: 700;
+            border: 1.5px solid var(--border);
+            background: white; color: var(--text-muted);
+            cursor: pointer; font-family: inherit;
+            transition: all 0.15s;
+        }
+        .hist-tab:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+        .hist-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
         .btn-record {
             padding: 7px 14px; background: var(--primary); color: white;
             border: none; border-radius: 7px; font-size: 13px; font-weight: 700;
@@ -626,6 +639,13 @@
             <div id="historySectionBody" class="sec-body collapsed">
                 <div class="history-body">
 
+                    <!-- 期間タブ -->
+                    <div class="hist-period-tabs">
+                        <button class="hist-tab active" data-period="daily">日次</button>
+                        <button class="hist-tab" data-period="monthly">月次</button>
+                        <button class="hist-tab" data-period="yearly">年次</button>
+                    </div>
+
                     <!-- Line charts (shown after ≥2 records) -->
                     <div id="histCharts" class="hidden">
                         <div class="history-charts-grid">
@@ -644,25 +664,30 @@
                         </div>
                     </div>
 
-                    <!-- History table -->
+                    <!-- History table (折りたたみ可) -->
                     <div class="chart-card">
-                        <div class="chart-title-row">
+                        <div class="chart-title-row sec-toggle-head" data-target="histTableBodyWrap">
                             <div class="chart-title">記録一覧</div>
-                            <button class="btn-csv-hist" id="btnExportHistCSV">📥 CSV出力</button>
+                            <div class="sec-right">
+                                <button class="btn-csv-hist" id="btnExportHistCSV" onclick="event.stopPropagation()">📥 CSV出力</button>
+                                <span class="chevron" id="histTableBodyWrapChevron">▲</span>
+                            </div>
                         </div>
-                        <div class="hist-tbl-wrap">
-                            <table class="hist-tbl">
-                                <thead>
-                                    <tr>
-                                        <th>日付</th>
-                                        <th>総評価額</th>
-                                        <th>損益額</th>
-                                        <th>損益率</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="histTableBody"></tbody>
-                            </table>
+                        <div id="histTableBodyWrap" class="sec-body">
+                            <div class="hist-tbl-wrap">
+                                <table class="hist-tbl">
+                                    <thead>
+                                        <tr>
+                                            <th>日付</th>
+                                            <th>総評価額</th>
+                                            <th>損益額</th>
+                                            <th>損益率</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="histTableBody"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
 
@@ -900,6 +925,7 @@ const PALETTE = [
 const CHART_FONT = "-apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif";
 let chartFundPie = null, chartAccountPie = null, chartPnLBar = null;
 let chartValueLine = null, chartPnLLine = null;
+let histPeriod = 'daily'; // 'daily' | 'monthly' | 'yearly'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -1562,44 +1588,70 @@ function deleteHistEntry(date) {
     renderHistory();
 }
 
+// ── History Period Aggregation ─────────────────────────────────────────────
+function aggregateHistory(period) {
+    const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
+    if (period === 'daily') return sorted;
+    const groups = new Map();
+    sorted.forEach(h => {
+        const key = period === 'monthly' ? h.date.slice(0, 7) : h.date.slice(0, 4);
+        groups.set(key, h);
+    });
+    return Array.from(groups.values());
+}
+
+function histLabel(h) {
+    if (histPeriod === 'monthly') {
+        const [y, m] = h.date.split('-');
+        return `${y.slice(2)}/${m}`;
+    }
+    if (histPeriod === 'yearly') return h.date.slice(0, 4);
+    const d = new Date(h.date);
+    return `${d.getMonth()+1}/${d.getDate()}`;
+}
+
 function renderHistory() {
+    const data = aggregateHistory(histPeriod);
     const chartsEl = $('histCharts');
-    if (history.length >= 2) {
+    if (data.length >= 2) {
         chartsEl.classList.remove('hidden');
-        renderHistoryCharts();
-    } else if (history.length < 2) {
+        renderHistoryCharts(data);
+    } else {
         chartsEl.classList.add('hidden');
         if (chartValueLine) { chartValueLine.destroy(); chartValueLine = null; }
         if (chartPnLLine)   { chartPnLLine.destroy();   chartPnLLine   = null; }
     }
-    renderHistTable();
+    renderHistTable(data);
 }
 
-function renderHistTable() {
+function renderHistTable(data) {
     const tbody = $('histTableBody');
-    if (history.length === 0) {
+    if (!data || data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px 10px;color:var(--text-muted);font-size:13px;">まだ記録がありません<br><small>「今日のデータを記録」を押してスナップショットを保存できます</small></td></tr>';
         return;
     }
-    tbody.innerHTML = [...history].reverse().map(h => {
+    tbody.innerHTML = [...data].reverse().map(h => {
         const cls = h.pnl > 0 ? 'gain' : h.pnl < 0 ? 'loss' : 'zero';
+        const delBtn = histPeriod === 'daily'
+            ? `<button class="btn-hist-del" onclick="deleteHistEntry('${h.date}')">削除</button>`
+            : '';
         return `
         <tr>
             <td>${h.date}</td>
             <td class="hist-value">${yen(h.value)}</td>
             <td class="hist-pnl ${cls}">${pnlStr(h.pnl)}</td>
             <td class="hist-rate ${cls}">${rateStr(h.rate)}</td>
-            <td><button class="btn-hist-del" onclick="deleteHistEntry('${h.date}')">削除</button></td>
+            <td>${delBtn}</td>
         </tr>`;
     }).join('');
 }
 
-function renderHistoryCharts() {
-    const labels    = history.map(h => { const d = new Date(h.date); return `${d.getMonth()+1}/${d.getDate()}`; });
-    const longLabels = history.map(h => h.date);
-    const values    = history.map(h => h.value);
-    const pnls      = history.map(h => h.pnl);
-    const ptRadius  = history.length > 30 ? 2 : 4;
+function renderHistoryCharts(data) {
+    const labels     = data.map(h => histLabel(h));
+    const longLabels = data.map(h => h.date);
+    const values     = data.map(h => h.value);
+    const pnls       = data.map(h => h.pnl);
+    const ptRadius   = data.length > 30 ? 2 : 4;
 
     const xAxis = {
         grid:   { color: '#e2e8f0' },
@@ -1898,6 +1950,7 @@ const DEFAULT_SECTIONS = {
     nisaSeichouBlockBody:     true,
     tokuteiBlockBody:         true,
     historySectionBody:       true,
+    histTableBodyWrap:        true,
     settingsSectionBody:      true
 };
 
@@ -2032,6 +2085,15 @@ $('overlay').addEventListener('click', e => {
 });
 ['inpQty', 'inpAcq', 'inpCur'].forEach(id => {
     $(id).addEventListener('input', updatePreview);
+});
+
+// ── History Period Tabs ────────────────────────────────────────────────────
+document.querySelectorAll('.hist-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        histPeriod = btn.dataset.period;
+        document.querySelectorAll('.hist-tab').forEach(b => b.classList.toggle('active', b === btn));
+        renderHistory();
+    });
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────
