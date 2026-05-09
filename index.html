@@ -2315,7 +2315,6 @@ function deleteHistEntry(date) {
 // ── History Period Aggregation ─────────────────────────────────────────────
 function aggregateHistory(period) {
     const sorted = combinedHistory();
-    if (sorted.length === 0) return [];
 
     // Compute cutoff date
     const today = new Date();
@@ -2328,13 +2327,33 @@ function aggregateHistory(period) {
     else if (period === '5y') { cutoff = new Date(today); cutoff.setFullYear(cutoff.getFullYear() - 5); }
 
     const cutoffStr = cutoff ? cutoff.toISOString().slice(0, 10) : null;
-    let filtered = cutoffStr ? sorted.filter(h => h.date >= cutoffStr) : sorted;
+    const dcFiltered = cutoffStr
+        ? dcHistory.filter(dh => dh.asOfDate >= cutoffStr)
+        : [...dcHistory];
 
-    // For periods ≥ 6m, aggregate to monthly (last record per month) to keep chart readable
+    let filtered = cutoffStr ? sorted.filter(h => h.date >= cutoffStr) : [...sorted];
+
     if (period === '6m' || period === '1y' || period === '3y' || period === '5y' || period === 'all') {
+        // Monthly aggregation: last IT record per month
         const groups = new Map();
         filtered.forEach(h => { groups.set(h.date.slice(0, 7), h); });
-        filtered = Array.from(groups.values());
+        // Fill in DC-only months not covered by any IT record
+        dcFiltered.forEach(dh => {
+            const key = dh.asOfDate.slice(0, 7);
+            if (!groups.has(key)) {
+                groups.set(key, { date: dh.asOfDate, value: 0, cost: 0, pnl: 0, rate: 0, dcOnly: true });
+            }
+        });
+        filtered = Array.from(groups.values()).sort((a, b) => a.date.localeCompare(b.date));
+    } else {
+        // Short periods: add DC snapshots in range that have no matching IT record
+        const itDates = new Set(filtered.map(h => h.date));
+        dcFiltered.forEach(dh => {
+            if (!itDates.has(dh.asOfDate)) {
+                filtered.push({ date: dh.asOfDate, value: 0, cost: 0, pnl: 0, rate: 0, dcOnly: true });
+            }
+        });
+        filtered.sort((a, b) => a.date.localeCompare(b.date));
     }
 
     return filtered;
@@ -2352,7 +2371,7 @@ function histLabel(h) {
 function renderHistory() {
     const data = aggregateHistory(histPeriod);
     const chartsEl = $('histCharts');
-    if (combinedHistory().length >= 2) {
+    if (data.length >= 2) {
         chartsEl.classList.remove('hidden');
         renderHistoryCharts(data);
     } else {
@@ -2369,19 +2388,27 @@ function renderHistTable(data) {
         return;
     }
     tbody.innerHTML = [...data].reverse().map(h => {
-        const dcV    = dcValueAt(h.date);
-        const dcC    = dcContribAt(h.date);
-        const value  = h.value + dcV;
-        const cost   = h.cost  + dcC;
-        const pnl    = h.pnl   + (dcV - dcC);
-        const rate   = cost > 0 ? (pnl / cost) * 100 : 0;
-        const cls    = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : 'zero';
-        const isAuto = h.auto && !history.find(m => m.date === h.date);
-        const actionCell = isAuto
-            ? `<span class="auto-hist-badge">自動</span>`
-            : `<button class="btn-hist-del" onclick="event.stopPropagation();deleteHistEntry('${h.date}')">削除</button>`;
+        const dcV = dcValueAt(h.date);
+        const dcC = dcContribAt(h.date);
+        let value, cost, pnl;
+        if (h.dcOnly) {
+            value = dcV; cost = dcC; pnl = dcV - dcC;
+        } else if (histFilter === 'funds') {
+            value = h.value; cost = h.cost; pnl = h.pnl;
+        } else {
+            value = h.value + dcV; cost = h.cost + dcC; pnl = h.pnl + (dcV - dcC);
+        }
+        const rate = cost > 0 ? (pnl / cost) * 100 : 0;
+        const cls  = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : 'zero';
+        const isAuto = h.dcOnly || (h.auto && !history.find(m => m.date === h.date));
+        const actionCell = h.dcOnly
+            ? `<span class="auto-hist-badge" style="background:#0f766e20;color:#0f766e">DC</span>`
+            : isAuto
+                ? `<span class="auto-hist-badge">自動</span>`
+                : `<button class="btn-hist-del" onclick="event.stopPropagation();deleteHistEntry('${h.date}')">削除</button>`;
+        const rowClick = h.dcOnly ? '' : `onclick="openHistDetail('${h.date}')"`;
         return `
-        <tr class="hist-row" onclick="openHistDetail('${h.date}')">
+        <tr class="hist-row" ${rowClick} style="${h.dcOnly ? 'cursor:default' : ''}">
             <td>${h.date}</td>
             <td class="hist-value">${yen(value)}</td>
             <td class="hist-pnl ${cls}">${pnlStr(pnl)}</td>
@@ -2392,22 +2419,24 @@ function renderHistTable(data) {
 }
 
 function renderHistoryCharts(data) {
-    const labels     = data.map(h => histLabel(h));
-    const longLabels = data.map(h => h.date);
+    // 'funds' フィルター時は DC のみ行（IT 記録のない月）を除外
+    const chartData  = histFilter === 'funds' ? data.filter(h => !h.dcOnly) : data;
+    const labels     = chartData.map(h => histLabel(h));
+    const longLabels = chartData.map(h => h.date);
 
     let values, costs, pnls;
     if (histFilter === 'funds') {
-        values = data.map(h => h.value);
-        costs  = data.map(h => h.cost);
-        pnls   = data.map(h => h.pnl);
+        values = chartData.map(h => h.value);
+        costs  = chartData.map(h => h.cost);
+        pnls   = chartData.map(h => h.pnl);
     } else if (histFilter === 'dc') {
-        values = data.map(h => dcValueAt(h.date));
-        costs  = data.map(h => dcContribAt(h.date));
-        pnls   = data.map(h => dcValueAt(h.date) - dcContribAt(h.date));
+        values = chartData.map(h => dcValueAt(h.date));
+        costs  = chartData.map(h => dcContribAt(h.date));
+        pnls   = chartData.map(h => dcValueAt(h.date) - dcContribAt(h.date));
     } else {
-        values = data.map(h => h.value + dcValueAt(h.date));
-        costs  = data.map(h => h.cost  + dcContribAt(h.date));
-        pnls   = data.map(h => h.pnl   + (dcValueAt(h.date) - dcContribAt(h.date)));
+        values = chartData.map(h => h.value + dcValueAt(h.date));
+        costs  = chartData.map(h => h.cost  + dcContribAt(h.date));
+        pnls   = chartData.map(h => h.pnl   + (dcValueAt(h.date) - dcContribAt(h.date)));
     }
 
     const ptRadius = data.length > 30 ? 2 : 4;
