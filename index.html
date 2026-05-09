@@ -299,6 +299,28 @@
         .account-head-right { text-align: right; font-size: 12px; }
         .acc-value { font-size: 14px; font-weight: 700; margin-bottom: 1px; }
 
+        /* ── NISA 枠使用状況パネル ── */
+        .nisa-quota { padding: 11px 13px; background: #f8fafc; border-bottom: 1px solid var(--border); }
+        .nisa-quota:empty { display: none; }
+        .quota-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; margin-bottom: 6px; gap: 8px; }
+        .quota-label { color: var(--text-muted); font-weight: 600; }
+        .quota-amount { font-weight: 700; color: var(--text); font-size: 12px; font-variant-numeric: tabular-nums; }
+        .quota-bar { display: flex; height: 14px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+        .quota-seg { height: 100%; transition: width 0.3s; }
+        .quota-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+        .quota-remain { font-weight: 700; }
+        .quota-remain.gain { color: #059669; }
+        .quota-remain.loss { color: #dc2626; }
+        .quota-breakdown { display: grid; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); }
+        .quota-bd-row {
+            display: grid; grid-template-columns: 10px 1fr auto auto;
+            gap: 8px; align-items: center; font-size: 11px;
+        }
+        .quota-bd-color { width: 10px; height: 10px; border-radius: 2px; }
+        .quota-bd-name { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .quota-bd-amount { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+        .quota-bd-pct { color: var(--text-muted); font-variant-numeric: tabular-nums; min-width: 42px; text-align: right; }
+
         /* ── Fund List ── */
         .fund-list { background: var(--card); }
         .fund-item { padding: 12px 14px; border-bottom: 1px solid var(--border); }
@@ -1014,6 +1036,7 @@
                     </div>
                 </div>
                 <div id="nisaTsumitateBlockBody" class="sec-body">
+                    <div class="nisa-quota" id="nisaTsumitateQuota"></div>
                     <div class="fund-list" id="nisaTsumitateList"></div>
                 </div>
             </div>
@@ -1031,6 +1054,7 @@
                     </div>
                 </div>
                 <div id="nisaSeichouBlockBody" class="sec-body">
+                    <div class="nisa-quota" id="nisaSeichouQuota"></div>
                     <div class="fund-list" id="nisaSeichouList"></div>
                 </div>
             </div>
@@ -1213,6 +1237,13 @@ let dcPension = {
 };
 let dcHistory = []; // [{ asOfDate, totalValue, contributions, pnl, holdings }]
 
+// 新NISA 生涯非課税限度額（取得価額ベース）
+const NISA_LIMITS = {
+    '新NISA積立': 6000000,    // 600万円
+    '新NISA成長': 12000000    // 1,200万円
+};
+const NISA_TOTAL_LIMIT = 18000000; // 合算 1,800万円
+
 // ── Chart Instances ────────────────────────────────────────────────────────
 const PALETTE = [
     '#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6',
@@ -1383,7 +1414,76 @@ function renderSummary() {
     }
 }
 
+function renderNisaQuota(acType, containerId) {
+    const el = $(containerId);
+    if (!el) return;
+    const limit = NISA_LIMITS[acType];
+    if (!limit) { el.innerHTML = ''; return; }
+
+    const af = funds.filter(f => f.account === acType);
+    if (af.length === 0) {
+        el.innerHTML = `
+        <div class="quota-head">
+            <span class="quota-label">生涯非課税枠の使用状況</span>
+            <span class="quota-amount">¥0 / ${yen(limit)}</span>
+        </div>
+        <div class="quota-bar"></div>
+        <div class="quota-meta">
+            <span>銘柄: 0件</span>
+            <span class="quota-remain gain">残 ${yen(limit)}</span>
+        </div>`;
+        return;
+    }
+
+    const segments = af.map((f, i) => {
+        const cost = calcFund(f).cost;
+        return {
+            name: f.name,
+            cost,
+            segPct: Math.min(100, (cost / limit) * 100),
+            color: PALETTE[i % PALETTE.length]
+        };
+    }).sort((a, b) => b.cost - a.cost);
+
+    const used      = segments.reduce((s, x) => s + x.cost, 0);
+    const remaining = Math.max(0, limit - used);
+    const usedPct   = Math.min(100, (used / limit) * 100);
+    const overLimit = used > limit;
+
+    const segHtml = segments.map(s =>
+        `<div class="quota-seg" style="width:${s.segPct.toFixed(2)}%;background:${s.color}" title="${esc(s.name)}: ${yen(s.cost)} (${((s.cost/limit)*100).toFixed(1)}%)"></div>`
+    ).join('');
+
+    const bdHtml = segments.map(s =>
+        `<div class="quota-bd-row">
+            <div class="quota-bd-color" style="background:${s.color}"></div>
+            <div class="quota-bd-name" title="${esc(s.name)}">${esc(s.name)}</div>
+            <div class="quota-bd-amount">${yen(s.cost)}</div>
+            <div class="quota-bd-pct">${((s.cost/limit)*100).toFixed(1)}%</div>
+        </div>`
+    ).join('');
+
+    const remainCls = overLimit ? 'loss' : remaining === 0 ? 'loss' : 'gain';
+    const remainLabel = overLimit ? `超過 ${yen(used - limit)}` : `残 ${yen(remaining)}`;
+
+    el.innerHTML = `
+    <div class="quota-head">
+        <span class="quota-label">生涯非課税枠の使用状況</span>
+        <span class="quota-amount">${yen(used)} / ${yen(limit)} (${usedPct.toFixed(1)}%)</span>
+    </div>
+    <div class="quota-bar">${segHtml}</div>
+    <div class="quota-meta">
+        <span>銘柄: ${af.length}件</span>
+        <span class="quota-remain ${remainCls}">${remainLabel}</span>
+    </div>
+    <div class="quota-breakdown">${bdHtml}</div>`;
+}
+
 function renderAccount(acType, listId, headRightId) {
+    // NISA口座は枠使用状況パネルも更新
+    if (acType === '新NISA積立') renderNisaQuota(acType, 'nisaTsumitateQuota');
+    if (acType === '新NISA成長') renderNisaQuota(acType, 'nisaSeichouQuota');
+
     const af = funds.filter(f => f.account === acType);
     let acCost = 0, acValue = 0;
     af.forEach(f => {
