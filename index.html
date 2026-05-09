@@ -399,6 +399,20 @@
         .hist-tab:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
         .hist-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
 
+        .hist-chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+        .hist-chart-header .chart-title { margin-bottom: 0; }
+        .hist-filter-tabs { display: flex; gap: 4px; }
+        .hist-ftab {
+            padding: 3px 10px; border-radius: 20px;
+            font-size: 11px; font-weight: 700;
+            border: 1.5px solid var(--border);
+            background: white; color: var(--text-muted);
+            cursor: pointer; font-family: inherit;
+            transition: all 0.15s;
+        }
+        .hist-ftab:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+        .hist-ftab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
         .btn-record {
             padding: 7px 14px; background: var(--primary); color: white;
             border: none; border-radius: 7px; font-size: 13px; font-weight: 700;
@@ -854,7 +868,14 @@
                     <!-- Line chart (shown after ≥2 records) -->
                     <div id="histCharts" class="hidden">
                         <div class="chart-card">
-                            <div class="chart-title">総資産・損益の推移</div>
+                            <div class="hist-chart-header">
+                                <div class="chart-title">総資産・損益の推移</div>
+                                <div class="hist-filter-tabs">
+                                    <button class="hist-ftab active" data-filter="all">すべて</button>
+                                    <button class="hist-ftab" data-filter="funds">投資信託</button>
+                                    <button class="hist-ftab" data-filter="dc">確定拠出年金</button>
+                                </div>
+                            </div>
                             <div class="chart-line-wrap" style="height:260px">
                                 <canvas id="chartValueLine"></canvas>
                             </div>
@@ -1196,7 +1217,8 @@ const PALETTE = [
 const CHART_FONT = "-apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif";
 let chartFundPie = null, chartAccountPie = null, chartPnLBar = null;
 let chartValueLine = null;
-let histPeriod = 'daily'; // 'daily' | 'monthly' | 'yearly'
+let histPeriod  = 'daily';  // 'daily' | 'monthly' | 'yearly'
+let histFilter  = 'all';   // 'all' | 'funds' | 'dc'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -2109,10 +2131,23 @@ function renderHistTable(data) {
 function renderHistoryCharts(data) {
     const labels     = data.map(h => histLabel(h));
     const longLabels = data.map(h => h.date);
-    // DC を含めた合算値
-    const values     = data.map(h => h.value + dcValueAt(h.date));
-    const pnls       = data.map(h => h.pnl + (dcValueAt(h.date) - dcContribAt(h.date)));
-    const ptRadius   = data.length > 30 ? 2 : 4;
+
+    let values, costs, pnls;
+    if (histFilter === 'funds') {
+        values = data.map(h => h.value);
+        costs  = data.map(h => h.cost);
+        pnls   = data.map(h => h.pnl);
+    } else if (histFilter === 'dc') {
+        values = data.map(h => dcValueAt(h.date));
+        costs  = data.map(h => dcContribAt(h.date));
+        pnls   = data.map(h => dcValueAt(h.date) - dcContribAt(h.date));
+    } else {
+        values = data.map(h => h.value + dcValueAt(h.date));
+        costs  = data.map(h => h.cost  + dcContribAt(h.date));
+        pnls   = data.map(h => h.pnl   + (dcValueAt(h.date) - dcContribAt(h.date)));
+    }
+
+    const ptRadius = data.length > 30 ? 2 : 4;
 
     const yFmt = v => {
         const a = Math.abs(v);
@@ -2143,6 +2178,17 @@ function renderHistoryCharts(data) {
                     yAxisID: 'y'
                 },
                 {
+                    label: '総取得額',
+                    data: costs,
+                    borderColor: '#94a3b8',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.5,
+                    borderDash: [5, 3],
+                    pointRadius: 0, pointHoverRadius: 3,
+                    tension: 0.35, fill: false,
+                    yAxisID: 'y'
+                },
+                {
                     label: '損益',
                     data: pnls,
                     borderWidth: 2,
@@ -2168,9 +2214,11 @@ function renderHistoryCharts(data) {
                 tooltip: {
                     callbacks: {
                         title: items => longLabels[items[0].dataIndex],
-                        label: ctx => ctx.datasetIndex === 0
-                            ? ` 総資産: ${yen(ctx.raw)}`
-                            : ` 損益: ${pnlStr(ctx.raw)}`
+                        label: ctx => {
+                            if (ctx.datasetIndex === 0) return ` 総資産: ${yen(ctx.raw)}`;
+                            if (ctx.datasetIndex === 1) return ` 総取得額: ${yen(ctx.raw)}`;
+                            return ` 損益: ${pnlStr(ctx.raw)}`;
+                        }
                     }
                 }
             },
@@ -2923,6 +2971,15 @@ document.querySelectorAll('.hist-tab').forEach(btn => {
     btn.addEventListener('click', () => {
         histPeriod = btn.dataset.period;
         document.querySelectorAll('.hist-tab').forEach(b => b.classList.toggle('active', b === btn));
+        renderHistory();
+    });
+});
+
+// ── History Filter Tabs (投資信託 / DC / すべて) ───────────────────────────
+document.querySelectorAll('.hist-ftab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        histFilter = btn.dataset.filter;
+        document.querySelectorAll('.hist-ftab').forEach(b => b.classList.toggle('active', b === btn));
         renderHistory();
     });
 });
