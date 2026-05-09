@@ -387,10 +387,10 @@
         .history-charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
         /* ── History Period Tabs ── */
-        .hist-period-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+        .hist-period-tabs { display: flex; gap: 4px; margin-bottom: 14px; flex-wrap: wrap; }
         .hist-tab {
-            padding: 5px 16px; border-radius: 20px;
-            font-size: 12px; font-weight: 700;
+            padding: 4px 10px; border-radius: 20px;
+            font-size: 11px; font-weight: 700;
             border: 1.5px solid var(--border);
             background: white; color: var(--text-muted);
             cursor: pointer; font-family: inherit;
@@ -428,7 +428,7 @@
         }
         .btn-csv-hist:hover { opacity: 0.8; }
 
-        .hist-tbl-wrap { overflow-x: auto; }
+        .hist-tbl-wrap { overflow-x: auto; max-height: 265px; overflow-y: auto; }
         .hist-tbl { width: 100%; border-collapse: collapse; }
         .hist-tbl th {
             font-size: 11px; font-weight: 700; color: var(--text-muted);
@@ -860,9 +860,13 @@
 
                     <!-- 期間タブ -->
                     <div class="hist-period-tabs">
-                        <button class="hist-tab active" data-period="daily">日次</button>
-                        <button class="hist-tab" data-period="monthly">月次</button>
-                        <button class="hist-tab" data-period="yearly">年次</button>
+                        <button class="hist-tab" data-period="1m">1ヶ月</button>
+                        <button class="hist-tab" data-period="3m">3ヶ月</button>
+                        <button class="hist-tab" data-period="6m">6ヶ月</button>
+                        <button class="hist-tab active" data-period="1y">1年</button>
+                        <button class="hist-tab" data-period="3y">3年</button>
+                        <button class="hist-tab" data-period="5y">5年</button>
+                        <button class="hist-tab" data-period="all">全期間</button>
                     </div>
 
                     <!-- Line chart (shown after ≥2 records) -->
@@ -1217,7 +1221,7 @@ const PALETTE = [
 const CHART_FONT = "-apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif";
 let chartFundPie = null, chartAccountPie = null, chartPnLBar = null;
 let chartValueLine = null;
-let histPeriod  = 'daily';  // 'daily' | 'monthly' | 'yearly'
+let histPeriod  = '1y';  // '1m' | '3m' | '6m' | '1y' | '3y' | '5y' | 'all'
 let histFilter  = 'all';   // 'all' | 'funds' | 'dc'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -2065,21 +2069,36 @@ function deleteHistEntry(date) {
 // ── History Period Aggregation ─────────────────────────────────────────────
 function aggregateHistory(period) {
     const sorted = combinedHistory();
-    if (period === 'daily') return sorted;
-    const groups = new Map();
-    sorted.forEach(h => {
-        const key = period === 'monthly' ? h.date.slice(0, 7) : h.date.slice(0, 4);
-        groups.set(key, h);
-    });
-    return Array.from(groups.values());
+    if (sorted.length === 0) return [];
+
+    // Compute cutoff date
+    const today = new Date();
+    let cutoff = null;
+    if (period === '1m') { cutoff = new Date(today); cutoff.setMonth(cutoff.getMonth() - 1); }
+    else if (period === '3m') { cutoff = new Date(today); cutoff.setMonth(cutoff.getMonth() - 3); }
+    else if (period === '6m') { cutoff = new Date(today); cutoff.setMonth(cutoff.getMonth() - 6); }
+    else if (period === '1y') { cutoff = new Date(today); cutoff.setFullYear(cutoff.getFullYear() - 1); }
+    else if (period === '3y') { cutoff = new Date(today); cutoff.setFullYear(cutoff.getFullYear() - 3); }
+    else if (period === '5y') { cutoff = new Date(today); cutoff.setFullYear(cutoff.getFullYear() - 5); }
+
+    const cutoffStr = cutoff ? cutoff.toISOString().slice(0, 10) : null;
+    let filtered = cutoffStr ? sorted.filter(h => h.date >= cutoffStr) : sorted;
+
+    // For periods ≥ 6m, aggregate to monthly (last record per month) to keep chart readable
+    if (period === '6m' || period === '1y' || period === '3y' || period === '5y' || period === 'all') {
+        const groups = new Map();
+        filtered.forEach(h => { groups.set(h.date.slice(0, 7), h); });
+        filtered = Array.from(groups.values());
+    }
+
+    return filtered;
 }
 
 function histLabel(h) {
-    if (histPeriod === 'monthly') {
+    if (histPeriod === '1y' || histPeriod === '3y' || histPeriod === '5y' || histPeriod === 'all') {
         const [y, m] = h.date.split('-');
         return `${y.slice(2)}/${m}`;
     }
-    if (histPeriod === 'yearly') return h.date.slice(0, 4);
     const d = new Date(h.date);
     return `${d.getMonth()+1}/${d.getDate()}`;
 }
@@ -2112,11 +2131,9 @@ function renderHistTable(data) {
         const rate   = cost > 0 ? (pnl / cost) * 100 : 0;
         const cls    = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : 'zero';
         const isAuto = h.auto && !history.find(m => m.date === h.date);
-        const actionCell = histPeriod === 'daily'
-            ? isAuto
-                ? `<span class="auto-hist-badge">自動</span>`
-                : `<button class="btn-hist-del" onclick="event.stopPropagation();deleteHistEntry('${h.date}')">削除</button>`
-            : '';
+        const actionCell = isAuto
+            ? `<span class="auto-hist-badge">自動</span>`
+            : `<button class="btn-hist-del" onclick="event.stopPropagation();deleteHistEntry('${h.date}')">削除</button>`;
         return `
         <tr class="hist-row" onclick="openHistDetail('${h.date}')">
             <td>${h.date}</td>
