@@ -80,7 +80,12 @@
         .col-left   { grid-area: left;   display: flex; flex-direction: column; gap: 14px; }
         .col-mid    { grid-area: mid;    display: flex; flex-direction: column; gap: 14px; }
         .col-right  { grid-area: right;  display: flex; flex-direction: column; gap: 14px; }
-        .col-full   { grid-area: bottom; }
+        .col-full   { grid-area: bottom; display: flex; flex-direction: column; gap: 14px; }
+        .accounts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+        }
 
         /* ── Portfolio Summary Card ── */
         .portfolio-card {
@@ -606,106 +611,68 @@
 
     </div><!-- /.col-left -->
 
-    <!-- Middle Column -->
+    <!-- Middle Column: 資産推移 -->
     <div class="col-mid">
 
-        <!-- Price Update Table -->
-        <div class="price-section hidden" id="priceSection">
-            <div class="price-sec-head sec-toggle-head" data-target="priceSectionBody">
-                <span class="price-sec-title">💹 現在価格を更新</span>
+        <!-- History / Time-Series Section -->
+        <section class="history-section" id="historySection">
+            <div class="history-head sec-toggle-head" data-target="historySectionBody">
+                <span class="history-head-label">📅 資産推移</span>
                 <div class="sec-right">
-                    <button class="btn-auto-fetch" id="btnAutoFetch" title="prices.jsonから価格を再読込">🤖 自動取得</button>
-                    <span class="last-updated" id="lastUpdated">未更新</span>
-                    <span class="chevron" id="priceSectionBodyChevron">▲</span>
+                    <button class="btn-record" id="btnRecord">今日のデータを記録</button>
+                    <span class="chevron" id="historySectionBodyChevron">▼</span>
                 </div>
             </div>
-            <div id="priceSectionBody" class="sec-body">
-                <div class="price-tbl-wrap">
-                    <table class="price-tbl">
-                        <thead>
-                            <tr>
-                                <th>銘柄</th>
-                                <th>現在価格（円/万口）</th>
-                                <th>損益</th>
-                            </tr>
-                        </thead>
-                        <tbody id="priceTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+            <div id="historySectionBody" class="sec-body collapsed">
+                <div class="history-body">
 
-        <!-- 旧NISA口座 -->
-        <div class="account-block">
-            <div class="account-head nisa-old sec-toggle-head" data-target="nisaOldBlockBody">
-                <h2>📘 旧NISA口座</h2>
-                <div class="sec-right">
-                    <div class="account-head-right" id="nisaOldHeadRight">
-                        <div class="acc-value">¥0</div>
-                        <div>損益: ¥0</div>
+                    <!-- Line charts (shown after ≥2 records) -->
+                    <div id="histCharts" class="hidden">
+                        <div class="history-charts-grid">
+                            <div class="chart-card">
+                                <div class="chart-title">総資産の推移</div>
+                                <div class="chart-line-wrap">
+                                    <canvas id="chartValueLine"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card">
+                                <div class="chart-title">損益の推移</div>
+                                <div class="chart-line-wrap">
+                                    <canvas id="chartPnLLine"></canvas>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <span class="chevron" id="nisaOldBlockBodyChevron">▲</span>
-                </div>
-            </div>
-            <div id="nisaOldBlockBody" class="sec-body">
-                <div class="fund-list" id="nisaOldList"></div>
-            </div>
-        </div>
 
-        <!-- 新NISA 積立投資枠 -->
-        <div class="account-block">
-            <div class="account-head nisa-tsumitate sec-toggle-head" data-target="nisaTsumitateBlockBody">
-                <h2>🌱 新NISA 積立投資枠</h2>
-                <div class="sec-right">
-                    <div class="account-head-right" id="nisaTsumitateHeadRight">
-                        <div class="acc-value">¥0</div>
-                        <div>損益: ¥0</div>
+                    <!-- History table -->
+                    <div class="chart-card">
+                        <div class="chart-title-row">
+                            <div class="chart-title">記録一覧</div>
+                            <button class="btn-csv-hist" id="btnExportHistCSV">📥 CSV出力</button>
+                        </div>
+                        <div class="hist-tbl-wrap">
+                            <table class="hist-tbl">
+                                <thead>
+                                    <tr>
+                                        <th>日付</th>
+                                        <th>総評価額</th>
+                                        <th>損益額</th>
+                                        <th>損益率</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="histTableBody"></tbody>
+                            </table>
+                        </div>
                     </div>
-                    <span class="chevron" id="nisaTsumitateBlockBodyChevron">▲</span>
-                </div>
-            </div>
-            <div id="nisaTsumitateBlockBody" class="sec-body">
-                <div class="fund-list" id="nisaTsumitateList"></div>
-            </div>
-        </div>
 
-        <!-- 新NISA 成長投資枠 -->
-        <div class="account-block">
-            <div class="account-head nisa-seichou sec-toggle-head" data-target="nisaSeichouBlockBody">
-                <h2>🚀 新NISA 成長投資枠</h2>
-                <div class="sec-right">
-                    <div class="account-head-right" id="nisaSeichouHeadRight">
-                        <div class="acc-value">¥0</div>
-                        <div>損益: ¥0</div>
-                    </div>
-                    <span class="chevron" id="nisaSeichouBlockBodyChevron">▲</span>
-                </div>
+                </div><!-- /.history-body -->
             </div>
-            <div id="nisaSeichouBlockBody" class="sec-body">
-                <div class="fund-list" id="nisaSeichouList"></div>
-            </div>
-        </div>
-
-        <!-- 特定口座 -->
-        <div class="account-block">
-            <div class="account-head tokutei sec-toggle-head" data-target="tokuteiBlockBody">
-                <h2>📊 特定口座</h2>
-                <div class="sec-right">
-                    <div class="account-head-right" id="tokuteiHeadRight">
-                        <div class="acc-value">¥0</div>
-                        <div>損益: ¥0</div>
-                    </div>
-                    <span class="chevron" id="tokuteiBlockBodyChevron">▲</span>
-                </div>
-            </div>
-            <div id="tokuteiBlockBody" class="sec-body">
-                <div class="fund-list" id="tokuteiList"></div>
-            </div>
-        </div>
+        </section>
 
     </div><!-- /.col-mid -->
 
-    <!-- Right Column -->
+    <!-- Right Column: グラフ -->
     <div class="col-right">
 
         <!-- Charts -->
@@ -738,61 +705,109 @@
 
     </div><!-- /.col-right -->
 
-    <!-- Full Width: History Section -->
-    <section class="history-section col-full" id="historySection">
-        <div class="history-head sec-toggle-head" data-target="historySectionBody">
-            <span class="history-head-label">📅 資産推移</span>
-            <div class="sec-right">
-                <button class="btn-record" id="btnRecord">今日のデータを記録</button>
-                <span class="chevron" id="historySectionBodyChevron">▼</span>
+    <!-- Bottom Full Width: 価格更新 + 個別銘柄 -->
+    <div class="col-full">
+
+        <!-- Price Update Table -->
+        <div class="price-section hidden" id="priceSection">
+            <div class="price-sec-head sec-toggle-head" data-target="priceSectionBody">
+                <span class="price-sec-title">💹 現在価格を更新</span>
+                <div class="sec-right">
+                    <button class="btn-auto-fetch" id="btnAutoFetch" title="prices.jsonから価格を再読込">🤖 自動取得</button>
+                    <span class="last-updated" id="lastUpdated">未更新</span>
+                    <span class="chevron" id="priceSectionBodyChevron">▲</span>
+                </div>
+            </div>
+            <div id="priceSectionBody" class="sec-body">
+                <div class="price-tbl-wrap">
+                    <table class="price-tbl">
+                        <thead>
+                            <tr>
+                                <th>銘柄</th>
+                                <th>現在価格（円/万口）</th>
+                                <th>損益</th>
+                            </tr>
+                        </thead>
+                        <tbody id="priceTableBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
-        <div id="historySectionBody" class="sec-body collapsed">
-            <div class="history-body">
 
-                <!-- Line charts (shown after ≥2 records) -->
-                <div id="histCharts" class="hidden">
-                    <div class="history-charts-grid">
-                        <div class="chart-card">
-                            <div class="chart-title">総資産の推移</div>
-                            <div class="chart-line-wrap">
-                                <canvas id="chartValueLine"></canvas>
-                            </div>
+        <!-- 口座別銘柄リスト (2×2グリッド) -->
+        <div class="accounts-grid">
+
+            <!-- 旧NISA口座 -->
+            <div class="account-block">
+                <div class="account-head nisa-old sec-toggle-head" data-target="nisaOldBlockBody">
+                    <h2>📘 旧NISA口座</h2>
+                    <div class="sec-right">
+                        <div class="account-head-right" id="nisaOldHeadRight">
+                            <div class="acc-value">¥0</div>
+                            <div>損益: ¥0</div>
                         </div>
-                        <div class="chart-card">
-                            <div class="chart-title">損益の推移</div>
-                            <div class="chart-line-wrap">
-                                <canvas id="chartPnLLine"></canvas>
-                            </div>
-                        </div>
+                        <span class="chevron" id="nisaOldBlockBodyChevron">▲</span>
                     </div>
                 </div>
+                <div id="nisaOldBlockBody" class="sec-body">
+                    <div class="fund-list" id="nisaOldList"></div>
+                </div>
+            </div>
 
-                <!-- History table -->
-                <div class="chart-card">
-                    <div class="chart-title-row">
-                        <div class="chart-title">記録一覧</div>
-                        <button class="btn-csv-hist" id="btnExportHistCSV">📥 CSV出力</button>
-                    </div>
-                    <div class="hist-tbl-wrap">
-                        <table class="hist-tbl">
-                            <thead>
-                                <tr>
-                                    <th>日付</th>
-                                    <th>総評価額</th>
-                                    <th>損益額</th>
-                                    <th>損益率</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody id="histTableBody"></tbody>
-                        </table>
+            <!-- 新NISA 積立投資枠 -->
+            <div class="account-block">
+                <div class="account-head nisa-tsumitate sec-toggle-head" data-target="nisaTsumitateBlockBody">
+                    <h2>🌱 新NISA 積立投資枠</h2>
+                    <div class="sec-right">
+                        <div class="account-head-right" id="nisaTsumitateHeadRight">
+                            <div class="acc-value">¥0</div>
+                            <div>損益: ¥0</div>
+                        </div>
+                        <span class="chevron" id="nisaTsumitateBlockBodyChevron">▲</span>
                     </div>
                 </div>
+                <div id="nisaTsumitateBlockBody" class="sec-body">
+                    <div class="fund-list" id="nisaTsumitateList"></div>
+                </div>
+            </div>
 
-            </div><!-- /.history-body -->
-        </div>
-    </section>
+            <!-- 新NISA 成長投資枠 -->
+            <div class="account-block">
+                <div class="account-head nisa-seichou sec-toggle-head" data-target="nisaSeichouBlockBody">
+                    <h2>🚀 新NISA 成長投資枠</h2>
+                    <div class="sec-right">
+                        <div class="account-head-right" id="nisaSeichouHeadRight">
+                            <div class="acc-value">¥0</div>
+                            <div>損益: ¥0</div>
+                        </div>
+                        <span class="chevron" id="nisaSeichouBlockBodyChevron">▲</span>
+                    </div>
+                </div>
+                <div id="nisaSeichouBlockBody" class="sec-body">
+                    <div class="fund-list" id="nisaSeichouList"></div>
+                </div>
+            </div>
+
+            <!-- 特定口座 -->
+            <div class="account-block">
+                <div class="account-head tokutei sec-toggle-head" data-target="tokuteiBlockBody">
+                    <h2>📊 特定口座</h2>
+                    <div class="sec-right">
+                        <div class="account-head-right" id="tokuteiHeadRight">
+                            <div class="acc-value">¥0</div>
+                            <div>損益: ¥0</div>
+                        </div>
+                        <span class="chevron" id="tokuteiBlockBodyChevron">▲</span>
+                    </div>
+                </div>
+                <div id="tokuteiBlockBody" class="sec-body">
+                    <div class="fund-list" id="tokuteiList"></div>
+                </div>
+            </div>
+
+        </div><!-- /.accounts-grid -->
+
+    </div><!-- /.col-full -->
 
 </main>
 
