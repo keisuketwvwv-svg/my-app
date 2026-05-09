@@ -1143,13 +1143,19 @@
             <div class="dc-head sec-toggle-head" data-target="dcSectionBody">
                 <span>🏦 確定拠出年金（企業型DC）</span>
                 <div class="sec-right">
-                    <button class="btn-dc-edit" id="btnDcEdit" onclick="event.stopPropagation();openDcEdit()">✏️ 編集</button>
+                    <div class="account-head-right" id="dcHeadRight" style="display:none">
+                        <div class="acc-value" id="dcHeadValue">¥0</div>
+                        <div id="dcHeadPnl">損益: ¥0</div>
+                    </div>
                     <span class="chevron" id="dcSectionBodyChevron">▲</span>
                 </div>
             </div>
             <div id="dcSectionBody" class="sec-body">
                 <div class="dc-body">
-                    <div class="dc-meta" id="dcMeta">―</div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                        <div class="dc-meta" id="dcMeta">―</div>
+                        <button class="btn-dc-edit" id="btnDcEdit" onclick="openDcEdit()">✏️ 編集</button>
+                    </div>
                     <div class="dc-summary">
                         <div class="dc-stat"><div class="ds-label">年金資産評価額</div><div class="ds-value" id="dcTotalValue">¥0</div></div>
                         <div class="dc-stat"><div class="ds-label">拠出金累計</div><div class="ds-value" id="dcContrib">¥0</div></div>
@@ -2590,11 +2596,14 @@ function renderDc() {
     const summary = document.querySelector('#dcSectionBody .dc-summary');
     const meta    = $('dcMeta');
 
+    const headRight = $('dcHeadRight');
+
     if (dcPension.totalValue <= 0 && dcPension.holdings.length === 0) {
         empty.classList.remove('hidden');
         tbl.style.display = 'none';
         summary.style.display = 'none';
         meta.textContent = '―';
+        headRight.style.display = 'none';
         return;
     }
     empty.classList.add('hidden');
@@ -2610,6 +2619,14 @@ function renderDc() {
     const pnlEl = $('dcPnl');
     pnlEl.textContent = pnlStr(dcPension.pnl);
     pnlEl.className   = 'ds-value ' + (dcPension.pnl > 0 ? 'gain' : dcPension.pnl < 0 ? 'loss' : '');
+
+    // ヘッダー（折りたたみ時も表示）
+    headRight.style.display = '';
+    $('dcHeadValue').textContent = yen(dcPension.totalValue);
+    const hPnl = $('dcHeadPnl');
+    hPnl.textContent = '損益: ' + pnlStr(dcPension.pnl);
+    const pnlColor = dcPension.pnl > 0 ? '#6ee7b7' : dcPension.pnl < 0 ? '#fca5a5' : 'rgba(255,255,255,0.75)';
+    hPnl.style.color = pnlColor;
 
     // 前回基準日比
     const dlEl = $('dcDelta');
