@@ -405,12 +405,40 @@
         .hist-pnl.loss, .hist-rate.loss { color: var(--loss); font-weight: 700; }
         .hist-pnl.zero, .hist-rate.zero { color: var(--text-muted); }
 
+        .hist-row { cursor: pointer; }
+        .hist-row:hover td { background: #eff6ff !important; }
+
         .btn-hist-del {
             font-size: 11px; padding: 3px 8px; border-radius: 5px;
             background: #fef2f2; color: var(--loss); border: none;
             cursor: pointer; font-family: inherit; transition: opacity 0.15s;
         }
         .btn-hist-del:hover { opacity: 0.8; }
+
+        /* ── 内訳ポップアップ ── */
+        .detail-summary {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 8px; margin-bottom: 16px;
+        }
+        .detail-stat {
+            background: var(--bg); border-radius: 8px; padding: 10px 12px;
+        }
+        .detail-stat .ds-label { font-size: 10px; color: var(--text-muted); margin-bottom: 3px; font-weight: 600; text-transform: uppercase; }
+        .detail-stat .ds-value { font-size: 15px; font-weight: 700; }
+        .detail-tbl { width: 100%; border-collapse: collapse; }
+        .detail-tbl th {
+            font-size: 10px; font-weight: 700; color: var(--text-muted);
+            padding: 6px 10px; border-bottom: 2px solid var(--border);
+            text-align: right; background: #fafafa; white-space: nowrap;
+        }
+        .detail-tbl th:first-child { text-align: left; }
+        .detail-tbl td {
+            padding: 9px 10px; border-bottom: 1px solid var(--border);
+            font-size: 12px; text-align: right; vertical-align: middle;
+        }
+        .detail-tbl tr:last-child td { border-bottom: none; }
+        .detail-tbl td:first-child { text-align: left; font-weight: 600; max-width: 160px; }
+        .detail-no-data { text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px; }
 
         /* ── Toast ── */
         .toast {
@@ -646,20 +674,12 @@
                         <button class="hist-tab" data-period="yearly">年次</button>
                     </div>
 
-                    <!-- Line charts (shown after ≥2 records) -->
+                    <!-- Line chart (shown after ≥2 records) -->
                     <div id="histCharts" class="hidden">
-                        <div class="history-charts-grid">
-                            <div class="chart-card">
-                                <div class="chart-title">総資産の推移</div>
-                                <div class="chart-line-wrap">
-                                    <canvas id="chartValueLine"></canvas>
-                                </div>
-                            </div>
-                            <div class="chart-card">
-                                <div class="chart-title">損益の推移</div>
-                                <div class="chart-line-wrap">
-                                    <canvas id="chartPnLLine"></canvas>
-                                </div>
+                        <div class="chart-card">
+                            <div class="chart-title">総資産・損益の推移</div>
+                            <div class="chart-line-wrap" style="height:260px">
+                                <canvas id="chartValueLine"></canvas>
                             </div>
                         </div>
                     </div>
@@ -902,6 +922,15 @@
     </div>
 </div>
 
+<!-- ── 銘柄内訳ポップアップ ── -->
+<div class="overlay hidden" id="histDetailOverlay">
+    <div class="sheet">
+        <h2 id="histDetailTitle"></h2>
+        <div id="histDetailContent"></div>
+        <button class="btn-cancel" id="histDetailClose">閉じる</button>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2/encoding.min.js"></script>
 <script>
@@ -924,7 +953,7 @@ const PALETTE = [
 ];
 const CHART_FONT = "-apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif";
 let chartFundPie = null, chartAccountPie = null, chartPnLBar = null;
-let chartValueLine = null, chartPnLLine = null;
+let chartValueLine = null;
 let histPeriod = 'daily'; // 'daily' | 'monthly' | 'yearly'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -1564,7 +1593,13 @@ function recordSnapshot() {
         value: Math.round(totalValue),
         cost:  Math.round(totalCost),
         pnl:   Math.round(pnl),
-        rate:  parseFloat(rate.toFixed(2))
+        rate:  parseFloat(rate.toFixed(2)),
+        funds: funds.map(f => {
+            const c = calcFund(f);
+            return { name: f.name, account: f.account, qty: f.qty, acq: f.acq, cur: f.cur,
+                     cost: Math.round(c.cost), value: Math.round(c.value),
+                     pnl: Math.round(c.pnl), rate: parseFloat(c.rate.toFixed(2)) };
+        })
     };
 
     const idx = history.findIndex(h => h.date === today);
@@ -1619,7 +1654,6 @@ function renderHistory() {
     } else {
         chartsEl.classList.add('hidden');
         if (chartValueLine) { chartValueLine.destroy(); chartValueLine = null; }
-        if (chartPnLLine)   { chartPnLLine.destroy();   chartPnLLine   = null; }
     }
     renderHistTable(data);
 }
@@ -1633,10 +1667,10 @@ function renderHistTable(data) {
     tbody.innerHTML = [...data].reverse().map(h => {
         const cls = h.pnl > 0 ? 'gain' : h.pnl < 0 ? 'loss' : 'zero';
         const delBtn = histPeriod === 'daily'
-            ? `<button class="btn-hist-del" onclick="deleteHistEntry('${h.date}')">削除</button>`
+            ? `<button class="btn-hist-del" onclick="event.stopPropagation();deleteHistEntry('${h.date}')">削除</button>`
             : '';
         return `
-        <tr>
+        <tr class="hist-row" onclick="openHistDetail('${h.date}')">
             <td>${h.date}</td>
             <td class="hist-value">${yen(h.value)}</td>
             <td class="hist-pnl ${cls}">${pnlStr(h.pnl)}</td>
@@ -1653,83 +1687,72 @@ function renderHistoryCharts(data) {
     const pnls       = data.map(h => h.pnl);
     const ptRadius   = data.length > 30 ? 2 : 4;
 
-    const xAxis = {
-        grid:   { color: '#e2e8f0' },
-        border: { color: '#cbd5e1' },
-        ticks:  { font: { size: 11, family: CHART_FONT }, color: '#64748b', maxTicksLimit: 8, maxRotation: 0 }
-    };
     const yFmt = v => {
         const a = Math.abs(v);
         if (a >= 1000000) return (v/1000000).toFixed(1) + 'M';
         if (a >= 10000)   return (v/10000).toFixed(0) + '万';
         return v.toLocaleString('ja-JP');
     };
-    const yAxis = (extra = {}) => ({
-        grid:   { color: '#e2e8f0' },
-        border: { color: '#cbd5e1' },
-        ticks:  { font: { size: 11, family: CHART_FONT }, color: '#64748b', callback: yFmt },
-        ...extra
-    });
+    const axisBase = {
+        grid: { color: '#e2e8f0' }, border: { color: '#cbd5e1' },
+        ticks: { font: { size: 10, family: CHART_FONT }, color: '#64748b', callback: yFmt }
+    };
 
-    // ── 総資産 line chart ──
     if (chartValueLine) chartValueLine.destroy();
     chartValueLine = new Chart($('chartValueLine'), {
         type: 'line',
         data: {
             labels,
-            datasets: [{
-                data: values,
-                borderColor: '#2563eb',
-                backgroundColor: 'rgba(37,99,235,0.07)',
-                borderWidth: 2.5,
-                pointBackgroundColor: '#2563eb',
-                pointRadius: ptRadius,
-                pointHoverRadius: 5,
-                tension: 0.35,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { callbacks: { title: (items) => longLabels[items[0].dataIndex], label: ctx => ` ${yen(ctx.raw)}` } }
-            },
-            scales: { x: xAxis, y: yAxis() }
-        }
-    });
-
-    // ── 損益 line chart ──
-    if (chartPnLLine) chartPnLLine.destroy();
-    chartPnLLine = new Chart($('chartPnLLine'), {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [{
-                data: pnls,
-                borderColor: '#059669',
-                backgroundColor: 'rgba(5,150,105,0.07)',
-                borderWidth: 2.5,
-                pointBackgroundColor: pnls.map(v => v >= 0 ? '#059669' : '#dc2626'),
-                pointRadius: ptRadius,
-                pointHoverRadius: 5,
-                tension: 0.35,
-                fill: true,
-                segment: {
-                    borderColor: ctx => ctx.p0.parsed.y < 0 ? '#dc2626' : '#059669',
-                    backgroundColor: ctx => ctx.p0.parsed.y < 0 ? 'rgba(220,38,38,0.07)' : 'rgba(5,150,105,0.07)'
+            datasets: [
+                {
+                    label: '総資産',
+                    data: values,
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37,99,235,0.06)',
+                    borderWidth: 2.5,
+                    pointBackgroundColor: '#2563eb',
+                    pointRadius: ptRadius, pointHoverRadius: 5,
+                    tension: 0.35, fill: true,
+                    yAxisID: 'y'
+                },
+                {
+                    label: '損益',
+                    data: pnls,
+                    borderWidth: 2,
+                    pointRadius: ptRadius, pointHoverRadius: 5,
+                    tension: 0.35, fill: false,
+                    yAxisID: 'y1',
+                    pointBackgroundColor: pnls.map(v => v >= 0 ? '#059669' : '#dc2626'),
+                    segment: {
+                        borderColor: ctx => ctx.p0.parsed.y < 0 ? '#dc2626' : '#059669'
+                    }
                 }
-            }]
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: { display: false },
-                tooltip: { callbacks: { title: (items) => longLabels[items[0].dataIndex], label: ctx => ` ${pnlStr(ctx.raw)}` } }
+                legend: {
+                    display: true, position: 'top',
+                    labels: { font: { size: 11, family: CHART_FONT }, boxWidth: 12, padding: 10 }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: items => longLabels[items[0].dataIndex],
+                        label: ctx => ctx.datasetIndex === 0
+                            ? ` 総資産: ${yen(ctx.raw)}`
+                            : ` 損益: ${pnlStr(ctx.raw)}`
+                    }
+                }
             },
-            scales: { x: xAxis, y: yAxis() }
+            scales: {
+                x: { grid: { color: '#e2e8f0' }, border: { color: '#cbd5e1' },
+                     ticks: { font: { size: 11, family: CHART_FONT }, color: '#64748b', maxTicksLimit: 8, maxRotation: 0 } },
+                y:  { ...axisBase, position: 'left' },
+                y1: { ...axisBase, position: 'right', grid: { drawOnChartArea: false } }
+            }
         }
     });
 }
@@ -2073,19 +2096,65 @@ document.addEventListener('click', e => {
             if (bodyId === 'chartsSectionBody') {
                 [chartFundPie, chartAccountPie, chartPnLBar].forEach(c => c && c.resize());
             } else if (bodyId === 'historySectionBody') {
-                [chartValueLine, chartPnLLine].forEach(c => c && c.resize());
+                if (chartValueLine) chartValueLine.resize();
             }
         });
     }
 });
 $('btnSave').addEventListener('click', saveFund);
 $('btnCancel').addEventListener('click', closeModal);
+$('histDetailClose').addEventListener('click', () => $('histDetailOverlay').classList.add('hidden'));
+$('histDetailOverlay').addEventListener('click', e => { if (e.target === $('histDetailOverlay')) $('histDetailOverlay').classList.add('hidden'); });
 $('overlay').addEventListener('click', e => {
     if (e.target === $('overlay')) closeModal();
 });
 ['inpQty', 'inpAcq', 'inpCur'].forEach(id => {
     $(id).addEventListener('input', updatePreview);
 });
+
+// ── History Detail Popup ───────────────────────────────────────────────────
+function openHistDetail(date) {
+    const h = history.find(h => h.date === date);
+    if (!h) return;
+    $('histDetailTitle').textContent = `📅 ${date} の内訳`;
+    const valueCls = h.pnl >= 0 ? 'gain' : 'loss';
+    let content = `
+        <div class="detail-summary">
+            <div class="detail-stat">
+                <div class="ds-label">総評価額</div>
+                <div class="ds-value">${yen(h.value)}</div>
+            </div>
+            <div class="detail-stat">
+                <div class="ds-label">損益額</div>
+                <div class="ds-value" style="color:var(--${valueCls})">${pnlStr(h.pnl)}</div>
+            </div>
+            <div class="detail-stat">
+                <div class="ds-label">損益率</div>
+                <div class="ds-value" style="color:var(--${valueCls})">${rateStr(h.rate)}</div>
+            </div>
+        </div>`;
+    if (h.funds && h.funds.length > 0) {
+        const rows = h.funds.map(f => {
+            const cls = f.pnl > 0 ? 'gain' : f.pnl < 0 ? 'loss' : 'zero';
+            const badge = `<span class="pt-badge ${accountCls(f.account)}" style="font-size:9px;padding:1px 5px">${esc(f.account)}</span>`;
+            return `<tr>
+                <td><div>${esc(f.name)}</div><div style="margin-top:3px">${badge}</div></td>
+                <td>${yen(f.value)}</td>
+                <td class="${cls}">${pnlStr(f.pnl)}</td>
+                <td class="${cls}">${rateStr(f.rate)}</td>
+                <td style="color:var(--text-muted);font-size:11px">¥${f.cur.toLocaleString()}</td>
+            </tr>`;
+        }).join('');
+        content += `<div style="overflow-x:auto"><table class="detail-tbl">
+            <thead><tr><th>銘柄</th><th>評価額</th><th>損益</th><th>損益率</th><th>基準価額</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table></div>`;
+    } else {
+        content += `<div class="detail-no-data">この記録には銘柄内訳データがありません<br><small>（新しい記録から内訳が保存されます）</small></div>`;
+    }
+    $('histDetailContent').innerHTML = content;
+    $('histDetailOverlay').classList.remove('hidden');
+}
 
 // ── History Period Tabs ────────────────────────────────────────────────────
 document.querySelectorAll('.hist-tab').forEach(btn => {
