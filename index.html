@@ -11,6 +11,9 @@
             --primary: #2563eb;
             --primary-dark: #1d4ed8;
             --nisa: #059669;
+            --nisa-old: #0284c7;
+            --nisa-tsumitate: #059669;
+            --nisa-seichou: #7c3aed;
             --tokutei: #d97706;
             --gain: #059669;
             --loss: #dc2626;
@@ -223,8 +226,10 @@
             font-size: 10px; font-weight: 700; padding: 2px 5px;
             border-radius: 4px; color: white; flex-shrink: 0;
         }
-        .pt-badge.nisa    { background: var(--nisa); }
-        .pt-badge.tokutei { background: var(--tokutei); }
+        .pt-badge.nisa-old       { background: var(--nisa-old); }
+        .pt-badge.nisa-tsumitate { background: var(--nisa-tsumitate); }
+        .pt-badge.nisa-seichou   { background: var(--nisa-seichou); }
+        .pt-badge.tokutei        { background: var(--tokutei); }
         .pt-yahoo { font-size: 10px; color: var(--primary); text-decoration: none; white-space: nowrap; }
         .pt-yahoo:hover { text-decoration: underline; }
 
@@ -250,8 +255,10 @@
             display: flex; justify-content: space-between; align-items: center;
             padding: 10px 14px; color: white;
         }
-        .account-head.nisa    { background: var(--nisa); }
-        .account-head.tokutei { background: var(--tokutei); }
+        .account-head.nisa-old       { background: var(--nisa-old); }
+        .account-head.nisa-tsumitate { background: var(--nisa-tsumitate); }
+        .account-head.nisa-seichou   { background: var(--nisa-seichou); }
+        .account-head.tokutei        { background: var(--tokutei); }
         .account-head h2 { font-size: 14px; font-weight: 700; }
         .account-head-right { text-align: right; font-size: 12px; }
         .acc-value { font-size: 14px; font-weight: 700; margin-bottom: 1px; }
@@ -628,20 +635,54 @@
             </div>
         </div>
 
-        <!-- NISA口座 -->
+        <!-- 旧NISA口座 -->
         <div class="account-block">
-            <div class="account-head nisa sec-toggle-head" data-target="nisaBlockBody">
-                <h2>🌱 NISA口座</h2>
+            <div class="account-head nisa-old sec-toggle-head" data-target="nisaOldBlockBody">
+                <h2>📘 旧NISA口座</h2>
                 <div class="sec-right">
-                    <div class="account-head-right" id="nisaHeadRight">
+                    <div class="account-head-right" id="nisaOldHeadRight">
                         <div class="acc-value">¥0</div>
                         <div>損益: ¥0</div>
                     </div>
-                    <span class="chevron" id="nisaBlockBodyChevron">▲</span>
+                    <span class="chevron" id="nisaOldBlockBodyChevron">▲</span>
                 </div>
             </div>
-            <div id="nisaBlockBody" class="sec-body">
-                <div class="fund-list" id="nisaList"></div>
+            <div id="nisaOldBlockBody" class="sec-body">
+                <div class="fund-list" id="nisaOldList"></div>
+            </div>
+        </div>
+
+        <!-- 新NISA 積立投資枠 -->
+        <div class="account-block">
+            <div class="account-head nisa-tsumitate sec-toggle-head" data-target="nisaTsumitateBlockBody">
+                <h2>🌱 新NISA 積立投資枠</h2>
+                <div class="sec-right">
+                    <div class="account-head-right" id="nisaTsumitateHeadRight">
+                        <div class="acc-value">¥0</div>
+                        <div>損益: ¥0</div>
+                    </div>
+                    <span class="chevron" id="nisaTsumitateBlockBodyChevron">▲</span>
+                </div>
+            </div>
+            <div id="nisaTsumitateBlockBody" class="sec-body">
+                <div class="fund-list" id="nisaTsumitateList"></div>
+            </div>
+        </div>
+
+        <!-- 新NISA 成長投資枠 -->
+        <div class="account-block">
+            <div class="account-head nisa-seichou sec-toggle-head" data-target="nisaSeichouBlockBody">
+                <h2>🚀 新NISA 成長投資枠</h2>
+                <div class="sec-right">
+                    <div class="account-head-right" id="nisaSeichouHeadRight">
+                        <div class="acc-value">¥0</div>
+                        <div>損益: ¥0</div>
+                    </div>
+                    <span class="chevron" id="nisaSeichouBlockBodyChevron">▲</span>
+                </div>
+            </div>
+            <div id="nisaSeichouBlockBody" class="sec-body">
+                <div class="fund-list" id="nisaSeichouList"></div>
             </div>
         </div>
 
@@ -773,7 +814,9 @@
             <label>口座種別</label>
             <div class="select-wrap">
                 <select id="inpAccount">
-                    <option value="NISA">NISA口座</option>
+                    <option value="旧NISA">旧NISA口座（旧制度）</option>
+                    <option value="新NISA積立">新NISA 積立投資枠</option>
+                    <option value="新NISA成長">新NISA 成長投資枠</option>
                     <option value="特定">特定口座</option>
                 </select>
             </div>
@@ -851,6 +894,13 @@ const rateStr = r => (r >= 0 ? '+' : '') + r.toFixed(2) + '%';
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
+function accountCls(account) {
+    if (account === '旧NISA')    return 'nisa-old';
+    if (account === '新NISA積立') return 'nisa-tsumitate';
+    if (account === '新NISA成長') return 'nisa-seichou';
+    return 'tokutei';
+}
+
 function calcFund(f) {
     const cost  = (f.qty * f.acq) / 10000;
     const value = (f.qty * f.cur) / 10000;
@@ -865,6 +915,8 @@ const HISTORY_KEY = 'tokushi_history_v1';
 function load() {
     try { funds   = JSON.parse(localStorage.getItem(STORAGE_KEY))  || []; } catch { funds   = []; }
     try { history = JSON.parse(localStorage.getItem(HISTORY_KEY))  || []; } catch { history = []; }
+    // 旧データ "NISA" → "旧NISA" へ移行
+    funds = funds.map(f => f.account === 'NISA' ? { ...f, account: '旧NISA' } : f);
     loadSettings();
 }
 
@@ -891,8 +943,10 @@ function persistSettings() {
 function render() {
     renderSummary();
     renderPriceTable();
-    renderAccount('NISA', 'nisaList',    'nisaHeadRight');
-    renderAccount('特定', 'tokuteiList', 'tokuteiHeadRight');
+    renderAccount('旧NISA',   'nisaOldList',        'nisaOldHeadRight');
+    renderAccount('新NISA積立', 'nisaTsumitateList',  'nisaTsumitateHeadRight');
+    renderAccount('新NISA成長', 'nisaSeichouList',    'nisaSeichouHeadRight');
+    renderAccount('特定',      'tokuteiList',        'tokuteiHeadRight');
     renderCharts();
     renderHistory();
 }
@@ -1056,7 +1110,7 @@ function renderPriceTable() {
             const f = items[0];
             const { pnl, rate } = calcFund(f);
             const cls   = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : 'zero';
-            const acCls = f.account === 'NISA' ? 'nisa' : 'tokutei';
+            const acCls = accountCls(f.account);
             html += `
             <tr>
                 <td>
@@ -1107,7 +1161,7 @@ function renderPriceTable() {
             items.forEach(f => {
                 const { pnl, rate } = calcFund(f);
                 const cls   = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : 'zero';
-                const acCls = f.account === 'NISA' ? 'nisa' : 'tokutei';
+                const acCls = accountCls(f.account);
                 html += `
             <tr class="pt-sub-row">
                 <td>
@@ -1135,8 +1189,10 @@ function schedulePartialRender() {
     clearTimeout(_priceRenderTimer);
     _priceRenderTimer = setTimeout(() => {
         renderSummary();
-        renderAccount('NISA', 'nisaList',    'nisaHeadRight');
-        renderAccount('特定', 'tokuteiList', 'tokuteiHeadRight');
+        renderAccount('旧NISA',   'nisaOldList',       'nisaOldHeadRight');
+        renderAccount('新NISA積立', 'nisaTsumitateList', 'nisaTsumitateHeadRight');
+        renderAccount('新NISA成長', 'nisaSeichouList',   'nisaSeichouHeadRight');
+        renderAccount('特定',      'tokuteiList',       'tokuteiHeadRight');
         renderCharts();
     }, 400);
 }
@@ -1202,22 +1258,29 @@ function renderCharts() {
     });
 
     // ── 口座別 資産比率（ドーナツ）──
-    const nisaVal    = funds.filter(f => f.account === 'NISA').reduce((s, f) => s + calcFund(f).value, 0);
-    const tokuteiVal = funds.filter(f => f.account === '特定').reduce((s, f) => s + calcFund(f).value, 0);
+    const acTypes = ['旧NISA', '新NISA積立', '新NISA成長', '特定'];
+    const acColors = ['#0284c7', '#059669', '#7c3aed', '#d97706'];
+    const acValues = acTypes.map(t => Math.round(
+        funds.filter(f => f.account === t).reduce((s, f) => s + calcFund(f).value, 0)
+    ));
+    const acFiltered = acTypes.reduce((acc, t, i) => {
+        if (acValues[i] > 0) { acc.labels.push(t + '口座'); acc.data.push(acValues[i]); acc.colors.push(acColors[i]); }
+        return acc;
+    }, { labels: [], data: [], colors: [] });
 
     if (chartAccountPie) chartAccountPie.destroy();
     chartAccountPie = new Chart($('chartAccountPie'), {
         type: 'doughnut',
         data: {
-            labels: ['NISA口座', '特定口座'],
+            labels: acFiltered.labels,
             datasets: [{
-                data: [Math.round(nisaVal), Math.round(tokuteiVal)],
-                backgroundColor: ['#059669', '#d97706'],
+                data: acFiltered.data,
+                backgroundColor: acFiltered.colors,
                 borderWidth: 2,
                 borderColor: '#fff'
             }]
         },
-        options: doughnutOpts(12)
+        options: doughnutOpts(11)
     });
 
     // ── 銘柄別 損益（横棒グラフ）──
@@ -1284,7 +1347,7 @@ function openAdd() {
     editId = null;
     $('sheetTitle').textContent = '銘柄を追加';
     $('inpName').value    = '';
-    $('inpAccount').value = 'NISA';
+    $('inpAccount').value = '新NISA積立';
     $('inpQty').value     = '';
     $('inpAcq').value     = '';
     $('inpCur').value     = '';
@@ -1813,12 +1876,14 @@ function generateMonthlyReport() {
 // ── Section Collapse ───────────────────────────────────────────────────────
 const SECTIONS_KEY = 'tokushi_sections_v1';
 const DEFAULT_SECTIONS = {
-    priceSectionBody:    true,   // 価格更新: 開く
-    chartsSectionBody:   true,   // グラフ: 開く
-    nisaBlockBody:       true,   // NISA: 開く
-    tokuteiBlockBody:    true,   // 特定: 開く
-    historySectionBody:  true,   // 資産推移: 開く
-    settingsSectionBody: true    // 設定: 開く
+    priceSectionBody:         true,
+    chartsSectionBody:        true,
+    nisaOldBlockBody:         true,
+    nisaTsumitateBlockBody:   true,
+    nisaSeichouBlockBody:     true,
+    tokuteiBlockBody:         true,
+    historySectionBody:       true,
+    settingsSectionBody:      true
 };
 
 function loadSectionStates() {
