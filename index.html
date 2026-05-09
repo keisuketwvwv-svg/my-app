@@ -1172,9 +1172,19 @@ function renderCharts() {
         }
     });
 
+    // ── 銘柄別にグループ化（NISA・特定を合算）──
+    const fundMap = {};
+    funds.forEach(f => {
+        const { value, pnl } = calcFund(f);
+        if (!fundMap[f.name]) fundMap[f.name] = { value: 0, pnl: 0 };
+        fundMap[f.name].value += value;
+        fundMap[f.name].pnl   += pnl;
+    });
+    const fundNames = Object.keys(fundMap);
+
     // ── 銘柄別 保有割合（ドーナツ）──
-    const fundLabels = funds.map(f => f.name.length > 15 ? f.name.slice(0, 15) + '…' : f.name);
-    const fundValues = funds.map(f => Math.round(calcFund(f).value));
+    const fundLabels = fundNames.map(n => n.length > 15 ? n.slice(0, 15) + '…' : n);
+    const fundValues = fundNames.map(n => Math.round(fundMap[n].value));
 
     if (chartFundPie) chartFundPie.destroy();
     chartFundPie = new Chart($('chartFundPie'), {
@@ -1183,7 +1193,7 @@ function renderCharts() {
             labels: fundLabels,
             datasets: [{
                 data: fundValues,
-                backgroundColor: PALETTE.slice(0, funds.length),
+                backgroundColor: PALETTE.slice(0, fundNames.length),
                 borderWidth: 2,
                 borderColor: '#fff'
             }]
@@ -1211,12 +1221,12 @@ function renderCharts() {
     });
 
     // ── 銘柄別 損益（横棒グラフ）──
-    const pnlValues  = funds.map(f => Math.round(calcFund(f).pnl));
-    const barLabels  = funds.map(f => f.name.length > 14 ? f.name.slice(0, 14) + '…' : f.name);
+    const pnlValues  = fundNames.map(n => Math.round(fundMap[n].pnl));
+    const barLabels  = fundNames.map(n => n.length > 14 ? n.slice(0, 14) + '…' : n);
     const barBg      = pnlValues.map(v => v >= 0 ? 'rgba(37,99,235,0.82)'  : 'rgba(220,38,38,0.82)');
     const barBorder  = pnlValues.map(v => v >= 0 ? '#1d4ed8' : '#b91c1c');
 
-    const barHeight = Math.max(140, funds.length * 52);
+    const barHeight = Math.max(140, fundNames.length * 52);
     $('chartBarWrap').style.height = barHeight + 'px';
 
     if (chartPnLBar) chartPnLBar.destroy();
