@@ -157,10 +157,12 @@
         }
         .btn-action:hover { opacity: 0.82; }
         .btn-action .btn-icon-lg { font-size: 14px; }
-        .btn-save-act   { background: #eff6ff; color: var(--primary);  border-color: #bfdbfe; }
-        .btn-csv-act    { background: #f0fdf4; color: #047857;         border-color: #bbf7d0; }
-        .btn-reset-act  { background: #fef2f2; color: var(--loss);     border-color: #fecaca; }
-        .btn-report-act { background: #f5f3ff; color: #7c3aed;         border-color: #ddd6fe; }
+        .btn-save-act    { background: #eff6ff; color: var(--primary);  border-color: #bfdbfe; }
+        .btn-csv-act     { background: #f0fdf4; color: #047857;         border-color: #bbf7d0; }
+        .btn-reset-act   { background: #fef2f2; color: var(--loss);     border-color: #fecaca; }
+        .btn-report-act  { background: #f5f3ff; color: #7c3aed;         border-color: #ddd6fe; }
+        .btn-backup-act  { background: #fff7ed; color: #c2410c;         border-color: #fed7aa; }
+        .btn-restore-act { background: #faf5ff; color: #6d28d9;         border-color: #e9d5ff; }
 
         /* ── Settings ── */
         .settings-section {
@@ -635,10 +637,17 @@
             <button class="btn-action btn-report-act" id="btnMonthlyReport">
                 <span class="btn-icon-lg">📄</span>月次レポート
             </button>
+            <button class="btn-action btn-backup-act" id="btnBackup">
+                <span class="btn-icon-lg">📤</span>バックアップ出力
+            </button>
+            <button class="btn-action btn-restore-act" id="btnRestore">
+                <span class="btn-icon-lg">📂</span>バックアップから復元
+            </button>
             <button class="btn-action btn-reset-act" id="btnReset">
                 <span class="btn-icon-lg">🗑️</span>リセット
             </button>
         </div>
+        <input type="file" id="restoreFileInput" accept=".json" style="display:none">
 
         <!-- Settings -->
         <div class="settings-section">
@@ -1530,6 +1539,70 @@ function saveData() {
     showToast('✓ 保存しました');
 }
 
+// ── Backup Export / Import ─────────────────────────────────────────────────
+function exportBackup() {
+    const backup = {
+        _version: 1,
+        _exportedAt: new Date().toISOString(),
+        funds,
+        history,
+        settings
+    };
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+    const d  = new Date();
+    const ds = String(d.getFullYear())
+        + pad2(d.getMonth() + 1)
+        + pad2(d.getDate())
+        + pad2(d.getHours())
+        + pad2(d.getMinutes());
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `投資管理_バックアップ_${ds}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    showToast('📤 バックアップを出力しました');
+}
+
+function importBackup(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        let backup;
+        try { backup = JSON.parse(e.target.result); } catch {
+            alert('ファイルの読み込みに失敗しました。\n有効なJSONファイルを選択してください。');
+            return;
+        }
+        if (!Array.isArray(backup.funds) || !Array.isArray(backup.history)) {
+            alert('このファイルは有効なバックアップ形式ではありません。');
+            return;
+        }
+        const exportedAt = backup._exportedAt
+            ? new Date(backup._exportedAt).toLocaleString('ja-JP')
+            : '不明';
+        const msg = `バックアップから復元しますか？\n\n`
+            + `出力日時: ${exportedAt}\n`
+            + `銘柄数: ${backup.funds.length}件\n`
+            + `履歴数: ${backup.history.length}件\n\n`
+            + `現在のデータはすべて上書きされます。`;
+        if (!confirm(msg)) return;
+
+        funds   = backup.funds   || [];
+        history = backup.history || [];
+        settings = { goalAmount: 0, startDate: '', principal: 0, ...(backup.settings || {}) };
+
+        persist();
+        persistHistory();
+        persistSettings();
+        applySettingsToInputs();
+        render();
+        showToast('📂 バックアップから復元しました');
+    };
+    reader.readAsText(file);
+}
+
 // ── Reset ──────────────────────────────────────────────────────────────────
 function resetData() {
     if (!confirm('すべてのデータを初期化しますか？\n銘柄データと記録履歴の両方が消えます。\nこの操作は元に戻せません。')) return;
@@ -2079,6 +2152,12 @@ function setDate() {
 // ── Event Listeners ────────────────────────────────────────────────────────
 $('btnSaveData').addEventListener('click', saveData);
 $('btnExportCSV').addEventListener('click', exportCSV);
+$('btnBackup').addEventListener('click', exportBackup);
+$('btnRestore').addEventListener('click', () => $('restoreFileInput').click());
+$('restoreFileInput').addEventListener('change', e => {
+    importBackup(e.target.files[0]);
+    e.target.value = '';
+});
 $('btnReset').addEventListener('click', resetData);
 $('btnMonthlyReport').addEventListener('click', generateMonthlyReport);
 $('fabAdd').addEventListener('click', openAdd);
