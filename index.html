@@ -15,6 +15,8 @@
             --nisa-tsumitate: #059669;
             --nisa-seichou: #7c3aed;
             --tokutei: #d97706;
+            --mochikabu: #ea580c;
+            --stock: #be123c;
             --gain: #059669;
             --loss: #dc2626;
             --bg: #f1f5f9;
@@ -289,6 +291,8 @@
         .pt-badge.nisa-tsumitate { background: var(--nisa-tsumitate); }
         .pt-badge.nisa-seichou   { background: var(--nisa-seichou); }
         .pt-badge.tokutei        { background: var(--tokutei); }
+        .pt-badge.mochikabu      { background: var(--mochikabu); }
+        .pt-badge.dc             { background: #0f766e; }
         .pt-yahoo { font-size: 10px; color: var(--primary); text-decoration: none; white-space: nowrap; }
         .pt-yahoo:hover { text-decoration: underline; }
 
@@ -734,6 +738,61 @@
             font-size: 13px; background: var(--bg); border-radius: 8px;
         }
         .dc-empty.hidden { display: none; }
+
+        /* ── 株式 セクション ── */
+        .stock-section {
+            background: var(--card); border-radius: var(--r);
+            box-shadow: var(--shadow); overflow: hidden;
+        }
+        .stock-head {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--stock); color: white; padding: 12px 16px;
+        }
+        .stock-head > span { font-size: 15px; font-weight: 700; }
+        .stock-body { padding: 14px 16px 18px; }
+        .stock-meta { font-size: 12px; color: var(--text-muted); }
+        .stock-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .stock-tbl th {
+            text-align: right; padding: 8px 6px; font-weight: 700;
+            font-size: 11px; color: var(--text-muted);
+            border-bottom: 2px solid var(--border); white-space: nowrap;
+        }
+        .stock-tbl th:nth-child(1), .stock-tbl th:nth-child(2), .stock-tbl th:nth-child(3) { text-align: left; }
+        .stock-tbl th:last-child { text-align: center; }
+        .stock-tbl td {
+            text-align: right; padding: 9px 6px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text); white-space: nowrap; font-variant-numeric: tabular-nums;
+        }
+        .stock-tbl tr:last-child td { border-bottom: none; }
+        .stock-tbl tbody tr:hover td { background: #fafbff; }
+        .stock-tbl td:nth-child(1) { font-family: ui-monospace, Menlo, monospace; color: var(--text-muted); text-align: left; }
+        .stock-tbl td:nth-child(2) { text-align: left; font-weight: 600; }
+        .stock-tbl td:nth-child(3) { text-align: left; }
+        .stock-tbl td:last-child   { text-align: center; }
+        .stock-tbl .stk-pnl.gain { color: var(--gain); font-weight: 700; }
+        .stock-tbl .stk-pnl.loss { color: var(--loss); font-weight: 700; }
+        .stock-tbl .stk-pnl.zero { color: var(--text-muted); }
+        .stock-empty {
+            padding: 24px 16px; text-align: center; color: var(--text-muted);
+            font-size: 13px; background: var(--bg); border-radius: 8px;
+        }
+        .stock-empty.hidden { display: none; }
+
+        /* 株式 編集モーダル プレビュー */
+        .stock-edit-preview {
+            margin-top: 14px; padding: 11px 13px;
+            background: var(--bg); border-radius: 8px;
+        }
+        .stock-edit-preview .row {
+            display: flex; justify-content: space-between;
+            font-size: 12px; margin-bottom: 4px;
+        }
+        .stock-edit-preview .row:last-child { margin-bottom: 0; }
+        .stock-edit-preview .row span:first-child { color: var(--text-muted); }
+        .stock-edit-preview .row span:last-child  { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+        .stock-edit-preview .row span.gain { color: var(--gain); }
+        .stock-edit-preview .row span.loss { color: var(--loss); }
 
         /* DC 編集モーダル：銘柄行 */
         .dc-edit-fund-row {
@@ -1206,6 +1265,48 @@
             </div>
         </section>
 
+        <!-- ── 株式 ── -->
+        <section class="stock-section" id="stockSection">
+            <div class="stock-head sec-toggle-head" data-target="stockSectionBody">
+                <span>📈 株式</span>
+                <div class="sec-right">
+                    <div class="account-head-right" id="stockHeadRight" style="display:none">
+                        <div class="acc-value" id="stockHeadValue">¥0</div>
+                        <div id="stockHeadPnl">損益: ¥0 (0.00%)</div>
+                    </div>
+                    <span class="chevron" id="stockSectionBodyChevron">▲</span>
+                </div>
+            </div>
+            <div id="stockSectionBody" class="sec-body">
+                <div class="stock-body">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                        <div class="stock-meta" id="stockMeta">―</div>
+                        <button class="btn-sm btn-edit-sm" id="btnAddStock" onclick="openStockEdit()">+ 銘柄追加</button>
+                    </div>
+                    <table class="stock-tbl" id="stockTbl">
+                        <thead>
+                            <tr>
+                                <th>コード</th>
+                                <th>銘柄</th>
+                                <th>口座</th>
+                                <th>株数</th>
+                                <th>取得単価</th>
+                                <th>現在価格</th>
+                                <th>評価額</th>
+                                <th>損益</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="stockTblBody"></tbody>
+                    </table>
+                    <div id="stockEmpty" class="stock-empty hidden">
+                        まだ銘柄がありません<br>
+                        <small>「+ 銘柄追加」から株式を登録してください</small>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </div><!-- /.col-full -->
 
 </main>
@@ -1286,6 +1387,36 @@
 </div>
 
 <!-- ── 確定拠出年金 編集モーダル ── -->
+<!-- 株式 編集モーダル -->
+<div class="overlay hidden" id="stockEditOverlay">
+    <div class="sheet">
+        <h2 id="stockEditTitle">📈 株式 を追加</h2>
+        <div class="field"><label>銘柄コード（例: 5243.T）</label><input type="text" id="stkInpCode" placeholder="5243.T"></div>
+        <div class="field"><label>銘柄名</label><input type="text" id="stkInpName" placeholder="銘柄名"></div>
+        <div class="field"><label>口座</label>
+            <select id="stkInpAccount">
+                <option value="持株会">持株会</option>
+                <option value="新NISA成長">新NISA 成長投資枠</option>
+                <option value="特定">特定口座</option>
+                <option value="旧NISA">旧NISA</option>
+            </select>
+        </div>
+        <div class="field"><label>保有株数</label><input type="number" id="stkInpShares" min="0" step="1" placeholder="100"></div>
+        <div class="field"><label>平均取得単価（円/株）</label><input type="number" id="stkInpAcq" min="0" step="0.1" placeholder="500"></div>
+        <div class="field"><label>現在価格（円/株、自動更新対象）</label><input type="number" id="stkInpCur" min="0" step="0.1" placeholder="525"></div>
+        <div class="stock-edit-preview" id="stockEditPreview">
+            <div class="row"><span>取得金額</span><span id="stkPvCost">¥0</span></div>
+            <div class="row"><span>評価額</span><span id="stkPvValue">¥0</span></div>
+            <div class="row"><span>損益</span><span id="stkPvPnl">―</span></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+            <button class="btn-save" id="btnStockSave" style="flex:1">💾 保存</button>
+            <button class="btn-cancel" id="btnStockCancel" style="flex:1;margin:0">キャンセル</button>
+        </div>
+        <button class="btn-del-sm hidden" id="btnStockDelete" style="margin-top:8px;width:100%;padding:8px;border-radius:7px;border:none;cursor:pointer;font-family:inherit;font-weight:700">この銘柄を削除</button>
+    </div>
+</div>
+
 <div class="overlay hidden" id="dcEditOverlay">
     <div class="sheet">
         <h2 id="dcEditTitle">🏦 確定拠出年金 を編集</h2>
@@ -1317,6 +1448,7 @@ const STORAGE_KEY  = 'tokushi_portfolio_v1';
 const SETTINGS_KEY = 'tokushi_settings_v1';
 const DC_KEY       = 'tokushi_dc_v1';
 const DC_HIST_KEY  = 'tokushi_dc_history_v1';
+const STOCK_KEY    = 'tokushi_stocks_v1';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let funds    = [];
@@ -1334,6 +1466,9 @@ let dcPension = {
     holdings: []   // [{ code, name, qty, unitPrice, value, ratio }]
 };
 let dcHistory = []; // [{ asOfDate, totalValue, contributions, pnl, holdings }]
+
+let stocks = []; // [{ id, code, name, account, shares, acqPrice, curPrice }]
+//   account: '持株会' | '新NISA成長' | '特定' | '旧NISA'
 
 // 新NISA 生涯非課税限度額（取得価額ベース）
 const NISA_LIMITS = {
@@ -1365,12 +1500,25 @@ function accountCls(account) {
     if (account === '旧NISA')    return 'nisa-old';
     if (account === '新NISA積立') return 'nisa-tsumitate';
     if (account === '新NISA成長') return 'nisa-seichou';
+    if (account === '持株会')    return 'mochikabu';
+    if (account === '確定拠出年金') return 'dc';
     return 'tokutei';
 }
 
 function calcFund(f) {
     const cost  = (f.qty * f.acq) / 10000;
     const value = (f.qty * f.cur) / 10000;
+    const pnl   = value - cost;
+    const rate  = cost > 0 ? (pnl / cost) * 100 : 0;
+    return { cost, value, pnl, rate };
+}
+
+function calcStock(s) {
+    const shares    = s.shares || 0;
+    const acqPrice  = s.acqPrice || 0;
+    const curPrice  = s.curPrice || 0;
+    const cost  = shares * acqPrice;
+    const value = shares * curPrice;
     const pnl   = value - cost;
     const rate  = cost > 0 ? (pnl / cost) * 100 : 0;
     return { cost, value, pnl, rate };
@@ -1386,6 +1534,7 @@ function load() {
     funds = funds.map(f => f.account === 'NISA' ? { ...f, account: '旧NISA' } : f);
     loadSettings();
     loadDcData();
+    loadStocks();
 }
 
 function persist() {
@@ -1418,6 +1567,11 @@ function loadDcData() {
 function persistDc()        { localStorage.setItem(DC_KEY,      JSON.stringify(dcPension)); }
 function persistDcHistory() { localStorage.setItem(DC_HIST_KEY, JSON.stringify(dcHistory)); }
 
+function loadStocks() {
+    try { stocks = JSON.parse(localStorage.getItem(STOCK_KEY)) || []; } catch { stocks = []; }
+}
+function persistStocks() { localStorage.setItem(STOCK_KEY, JSON.stringify(stocks)); }
+
 // ── Render ─────────────────────────────────────────────────────────────────
 function render() {
     renderSummary();
@@ -1427,6 +1581,7 @@ function render() {
     renderAccount('新NISA成長', 'nisaSeichouList',    'nisaSeichouHeadRight');
     renderAccount('特定',      'tokuteiList',        'tokuteiHeadRight');
     renderDc();
+    renderStocks();
     renderCharts();
     renderHistory();
 }
@@ -1435,6 +1590,12 @@ function renderSummary() {
     let totalCost = 0, totalValue = 0;
     funds.forEach(f => {
         const { cost, value } = calcFund(f);
+        totalCost  += cost;
+        totalValue += value;
+    });
+    // 株式を加算
+    stocks.forEach(s => {
+        const { cost, value } = calcStock(s);
         totalCost  += cost;
         totalValue += value;
     });
@@ -1457,7 +1618,7 @@ function renderSummary() {
     retEl.textContent = rateStr(rate);
     retEl.className   = 'stat-value ' + (rate > 0 ? 'gain' : rate < 0 ? 'loss' : '');
 
-    $('summaryCount').textContent = funds.length + '本';
+    $('summaryCount').textContent = (funds.length + stocks.length) + '本';
 
     // ── CAGR ──
     const cagrRow = $('cagrRow');
@@ -1487,11 +1648,16 @@ function renderSummary() {
         goalWrap.classList.add('hidden');
     }
 
-    // ── 特定口座 税引き後 ──
+    // ── 特定口座 / 持株会 税引き後（20.315%課税対象） ──
     const TAX_RATE = 0.20315;
     let tokCost = 0, tokValue = 0;
     funds.filter(f => f.account === '特定').forEach(f => {
         const c = calcFund(f);
+        tokCost  += c.cost;
+        tokValue += c.value;
+    });
+    stocks.filter(s => s.account === '特定' || s.account === '持株会').forEach(s => {
+        const c = calcStock(s);
         tokCost  += c.cost;
         tokValue += c.value;
     });
@@ -1528,7 +1694,9 @@ function renderSummary() {
 
 function renderNisaDashQuota() {
     const tsUsed  = funds.filter(f => f.account === '新NISA積立').reduce((s, f) => s + calcFund(f).cost, 0);
-    const scUsed  = funds.filter(f => f.account === '新NISA成長').reduce((s, f) => s + calcFund(f).cost, 0);
+    const scFund  = funds.filter(f => f.account === '新NISA成長').reduce((s, f) => s + calcFund(f).cost, 0);
+    const scStock = stocks.filter(s => s.account === '新NISA成長').reduce((sum, s) => sum + calcStock(s).cost, 0);
+    const scUsed  = scFund + scStock;
     const total   = tsUsed + scUsed;
     const el      = $('nisaDashQuota');
 
@@ -1566,8 +1734,12 @@ function renderNisaQuota(acType, containerId) {
     const limit = NISA_LIMITS[acType];
     if (!limit) { el.innerHTML = ''; return; }
 
-    const af = funds.filter(f => f.account === acType);
-    if (af.length === 0) {
+    // 投資信託 + 株式（同じ口座区分）を統合
+    const items = [
+        ...funds.filter(f => f.account === acType).map(f => ({ name: f.name, cost: calcFund(f).cost })),
+        ...stocks.filter(s => s.account === acType).map(s => ({ name: s.name + ' 📈', cost: calcStock(s).cost }))
+    ];
+    if (items.length === 0) {
         el.innerHTML = `
         <div class="quota-head">
             <span class="quota-label">生涯非課税枠の使用状況</span>
@@ -1581,15 +1753,12 @@ function renderNisaQuota(acType, containerId) {
         return;
     }
 
-    const segments = af.map((f, i) => {
-        const cost = calcFund(f).cost;
-        return {
-            name: f.name,
-            cost,
-            segPct: Math.min(100, (cost / limit) * 100),
-            color: PALETTE[i % PALETTE.length]
-        };
-    }).sort((a, b) => b.cost - a.cost);
+    const segments = items.map((it, i) => ({
+        name: it.name,
+        cost: it.cost,
+        segPct: Math.min(100, (it.cost / limit) * 100),
+        color: PALETTE[i % PALETTE.length]
+    })).sort((a, b) => b.cost - a.cost);
 
     const used      = segments.reduce((s, x) => s + x.cost, 0);
     const remaining = Math.max(0, limit - used);
@@ -1619,7 +1788,7 @@ function renderNisaQuota(acType, containerId) {
     </div>
     <div class="quota-bar">${segHtml}</div>
     <div class="quota-meta">
-        <span>銘柄: ${af.length}件</span>
+        <span>銘柄: ${items.length}件</span>
         <span class="quota-remain ${remainCls}">${remainLabel}</span>
     </div>
     <div class="quota-breakdown">${bdHtml}</div>`;
@@ -1721,7 +1890,7 @@ function buildFundGroups() {
 
 function renderPriceTable() {
     const section = $('priceSection');
-    if (funds.length === 0) { section.classList.add('hidden'); return; }
+    if (funds.length === 0 && stocks.length === 0) { section.classList.add('hidden'); return; }
     section.classList.remove('hidden');
 
     _fundGroups = buildFundGroups();
@@ -1805,6 +1974,34 @@ function renderPriceTable() {
         }
     });
 
+    // 株式行（funds の後）
+    stocks.forEach(s => {
+        const c     = calcStock(s);
+        const cls   = c.pnl > 0 ? 'gain' : c.pnl < 0 ? 'loss' : 'zero';
+        const acCls = accountCls(s.account);
+        const yahoo = s.code
+            ? `https://finance.yahoo.co.jp/quote/${encodeURIComponent(s.code)}`
+            : `https://finance.yahoo.co.jp/search/?query=${encodeURIComponent(s.name)}`;
+        html += `
+        <tr>
+            <td>
+                <div class="pt-name-text">${esc(s.name)} <span style="font-size:10px;color:var(--text-muted)">📈 ${esc(s.code || '')}</span></div>
+                <div class="pt-meta">
+                    <span class="pt-badge ${acCls}">${esc(s.account)}</span>
+                    <a class="pt-yahoo" href="${yahoo}" target="_blank" rel="noopener noreferrer">Yahoo! ↗</a>
+                </div>
+            </td>
+            <td>
+                <input class="price-inp" type="text" inputmode="decimal"
+                       value="${s.curPrice || 0}" data-stock-id="${s.id}" autocomplete="off" autocorrect="off">
+            </td>
+            <td class="pt-pnl-col">
+                <span class="pt-pnl ${cls}"  id="pt-pnl-${s.id}">${pnlStr(c.pnl)}</span>
+                <span class="pt-rate ${cls}" id="pt-rate-${s.id}">(${rateStr(c.rate)})</span>
+            </td>
+        </tr>`;
+    });
+
     $('priceTableBody').innerHTML = html;
     renderLastUpdated();
 }
@@ -1819,6 +2016,7 @@ function schedulePartialRender() {
         renderAccount('新NISA積立', 'nisaTsumitateList', 'nisaTsumitateHeadRight');
         renderAccount('新NISA成長', 'nisaSeichouList',   'nisaSeichouHeadRight');
         renderAccount('特定',      'tokuteiList',       'tokuteiHeadRight');
+        renderStocks();
         renderCharts();
     }, 400);
 }
@@ -1826,7 +2024,7 @@ function schedulePartialRender() {
 // ── Charts ─────────────────────────────────────────────────────────────────
 function renderCharts() {
     const section = $('chartsSection');
-    if (funds.length === 0 && dcPension.totalValue <= 0) {
+    if (funds.length === 0 && stocks.length === 0 && dcPension.totalValue <= 0) {
         section.classList.add('hidden');
         [chartFundPie, chartAccountPie, chartPnLBar].forEach(c => c && c.destroy());
         chartFundPie = chartAccountPie = chartPnLBar = null;
@@ -1854,13 +2052,20 @@ function renderCharts() {
         }
     });
 
-    // ── 銘柄別にグループ化（NISA・特定を合算）──
+    // ── 銘柄別にグループ化（NISA・特定を合算、株式も含む）──
     const fundMap = {};
     funds.forEach(f => {
         const { value, pnl } = calcFund(f);
         if (!fundMap[f.name]) fundMap[f.name] = { value: 0, pnl: 0 };
         fundMap[f.name].value += value;
         fundMap[f.name].pnl   += pnl;
+    });
+    stocks.forEach(s => {
+        const { value, pnl } = calcStock(s);
+        const key = s.name + ' 📈';
+        if (!fundMap[key]) fundMap[key] = { value: 0, pnl: 0 };
+        fundMap[key].value += value;
+        fundMap[key].pnl   += pnl;
     });
     const fundNames = Object.keys(fundMap);
 
@@ -1884,11 +2089,13 @@ function renderCharts() {
     });
 
     // ── 口座別 資産比率（ドーナツ）──
-    const acTypes  = ['旧NISA', '新NISA積立', '新NISA成長', '特定', '確定拠出年金'];
-    const acColors = ['#0284c7', '#059669', '#7c3aed', '#d97706', '#0f766e'];
+    const acTypes  = ['旧NISA', '新NISA積立', '新NISA成長', '特定', '持株会', '確定拠出年金'];
+    const acColors = ['#0284c7', '#059669', '#7c3aed', '#d97706', '#ea580c', '#0f766e'];
     const acValues = acTypes.map(t => {
         if (t === '確定拠出年金') return Math.round(dcPension.totalValue || 0);
-        return Math.round(funds.filter(f => f.account === t).reduce((s, f) => s + calcFund(f).value, 0));
+        const fundSum  = funds.filter(f => f.account === t).reduce((s, f) => s + calcFund(f).value, 0);
+        const stockSum = stocks.filter(s => s.account === t).reduce((sum, s) => sum + calcStock(s).value, 0);
+        return Math.round(fundSum + stockSum);
     });
     const acFiltered = acTypes.reduce((acc, t, i) => {
         if (acValues[i] > 0) {
@@ -2076,13 +2283,14 @@ function saveData() {
 // ── Backup Export / Import ─────────────────────────────────────────────────
 function exportBackup() {
     const backup = {
-        _version: 2,
+        _version: 3,
         _exportedAt: new Date().toISOString(),
         funds,
         history,
         settings,
         dcPension,
-        dcHistory
+        dcHistory,
+        stocks
     };
     const json = JSON.stringify(backup, null, 2);
     const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
@@ -2118,10 +2326,12 @@ function importBackup(file) {
         const exportedAt = backup._exportedAt
             ? new Date(backup._exportedAt).toLocaleString('ja-JP')
             : '不明';
-        const dcCount = (backup.dcHistory && Array.isArray(backup.dcHistory)) ? backup.dcHistory.length : 0;
+        const dcCount    = (backup.dcHistory && Array.isArray(backup.dcHistory)) ? backup.dcHistory.length : 0;
+        const stockCount = (backup.stocks    && Array.isArray(backup.stocks))    ? backup.stocks.length    : 0;
         const msg = `バックアップから復元しますか？\n\n`
             + `出力日時: ${exportedAt}\n`
             + `銘柄数: ${backup.funds.length}件\n`
+            + `株式数: ${stockCount}件\n`
             + `履歴数: ${backup.history.length}件\n`
             + `DC履歴: ${dcCount}件\n\n`
             + `現在のデータはすべて上書きされます。`;
@@ -2137,12 +2347,15 @@ function importBackup(file) {
             ...(backup.dcPension || {})
         };
         dcHistory = Array.isArray(backup.dcHistory) ? backup.dcHistory : [];
+        // 株式（v3 以降）
+        stocks = Array.isArray(backup.stocks) ? backup.stocks : [];
 
         persist();
         persistHistory();
         persistSettings();
         persistDc();
         persistDcHistory();
+        persistStocks();
         applySettingsToInputs();
         render();
         showToast('📂 バックアップから復元しました');
@@ -2152,22 +2365,24 @@ function importBackup(file) {
 
 // ── Reset ──────────────────────────────────────────────────────────────────
 function resetData() {
-    if (!confirm('すべてのデータを初期化しますか？\n銘柄・履歴・確定拠出年金のデータがすべて消えます。\nこの操作は元に戻せません。')) return;
+    if (!confirm('すべてのデータを初期化しますか？\n銘柄・株式・履歴・確定拠出年金のデータがすべて消えます。\nこの操作は元に戻せません。')) return;
     funds = [];
     history = [];
     dcPension = { asOfDate: '', totalValue: 0, contributions: 0, pnl: 0, holdings: [] };
     dcHistory = [];
+    stocks = [];
     persist();
     persistHistory();
     persistDc();
     persistDcHistory();
+    persistStocks();
     render();
     showToast('データをリセットしました');
 }
 
 // ── CSV Export ─────────────────────────────────────────────────────────────
 function exportCSV() {
-    if (funds.length === 0) { alert('エクスポートするデータがありません'); return; }
+    if (funds.length === 0 && stocks.length === 0) { alert('エクスポートするデータがありません'); return; }
 
     const headers = [
         '銘柄名', '口座種別', '保有口数（口）',
@@ -2175,7 +2390,7 @@ function exportCSV() {
         '取得金額（円）', '現在評価額（円）', '損益額（円）', '損益率（%）'
     ];
 
-    const rows = funds.map(f => {
+    const fundRows = funds.map(f => {
         const { cost, value, pnl, rate } = calcFund(f);
         return [
             f.name,
@@ -2189,6 +2404,21 @@ function exportCSV() {
             rate.toFixed(2)
         ];
     });
+    const stockRows = stocks.map(s => {
+        const { cost, value, pnl, rate } = calcStock(s);
+        return [
+            s.name + ' 📈',
+            s.account,
+            s.shares,
+            s.acqPrice,
+            s.curPrice,
+            Math.round(cost),
+            Math.round(value),
+            Math.round(pnl),
+            rate.toFixed(2)
+        ];
+    });
+    const rows = [...fundRows, ...stockRows];
 
     const csv = [headers, ...rows]
         .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
@@ -2221,12 +2451,27 @@ function todayStr() {
 }
 
 function recordSnapshot() {
-    if (funds.length === 0) { alert('記録する銘柄データがありません'); return; }
+    if (funds.length === 0 && stocks.length === 0) { alert('記録する銘柄データがありません'); return; }
 
     let totalCost = 0, totalValue = 0;
-    funds.forEach(f => { const c = calcFund(f); totalCost += c.cost; totalValue += c.value; });
+    funds.forEach(f  => { const c = calcFund(f);  totalCost += c.cost; totalValue += c.value; });
+    stocks.forEach(s => { const c = calcStock(s); totalCost += c.cost; totalValue += c.value; });
     const pnl  = totalValue - totalCost;
     const rate = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+
+    const fundBreakdown = funds.map(f => {
+        const c = calcFund(f);
+        return { name: f.name, account: f.account, qty: f.qty, acq: f.acq, cur: f.cur,
+                 cost: Math.round(c.cost), value: Math.round(c.value),
+                 pnl: Math.round(c.pnl), rate: parseFloat(c.rate.toFixed(2)) };
+    });
+    const stockBreakdown = stocks.map(s => {
+        const c = calcStock(s);
+        return { name: s.name, account: s.account, code: s.code, type: 'stock',
+                 qty: s.shares, acq: s.acqPrice, cur: s.curPrice,
+                 cost: Math.round(c.cost), value: Math.round(c.value),
+                 pnl: Math.round(c.pnl), rate: parseFloat(c.rate.toFixed(2)) };
+    });
 
     const today = todayStr();
     const snap  = {
@@ -2235,12 +2480,7 @@ function recordSnapshot() {
         cost:  Math.round(totalCost),
         pnl:   Math.round(pnl),
         rate:  parseFloat(rate.toFixed(2)),
-        funds: funds.map(f => {
-            const c = calcFund(f);
-            return { name: f.name, account: f.account, qty: f.qty, acq: f.acq, cur: f.cur,
-                     cost: Math.round(c.cost), value: Math.round(c.value),
-                     pnl: Math.round(c.pnl), rate: parseFloat(c.rate.toFixed(2)) };
-        })
+        funds: [...fundBreakdown, ...stockBreakdown]
     };
 
     const idx = history.findIndex(h => h.date === today);
@@ -2600,6 +2840,36 @@ async function loadPricesJSON(showFeedback = false) {
     } finally {
         if (btn) { btn.classList.remove('loading'); btn.textContent = '🤖 自動取得'; }
     }
+
+    // 株価も並行取得（個別失敗してOK）
+    loadStockPricesJSON(showFeedback);
+}
+
+async function loadStockPricesJSON(showFeedback = false) {
+    if (stocks.length === 0) return;
+    try {
+        const resp = await fetch('https://raw.githubusercontent.com/keisuketwvwv-svg/my-app/main/stock_prices.json?' + Date.now());
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const priceMap = data.prices || {};
+        if (Object.keys(priceMap).length === 0) return;
+
+        let count = 0;
+        stocks.forEach(s => {
+            const entry = priceMap[s.code];
+            if (entry && entry.price > 0 && s.curPrice !== entry.price) {
+                s.curPrice = entry.price;
+                count++;
+            }
+        });
+        if (count > 0) {
+            persistStocks();
+            render();
+            if (showFeedback) showToast(`📈 ${count}件の株価を自動更新しました`);
+        }
+    } catch (e) {
+        // stock_prices.json が未配置でも静かに無視
+    }
 }
 
 function renderAutoBadge(updatedAt, priceMap) {
@@ -2820,6 +3090,132 @@ function saveDcEdit() {
     showToast('🏦 確定拠出年金データを保存しました');
 }
 
+// ── 株式 ───────────────────────────────────────────────────────────────────
+function renderStocks() {
+    const empty     = $('stockEmpty');
+    const tbl       = $('stockTbl');
+    const headRight = $('stockHeadRight');
+    const meta      = $('stockMeta');
+    const tbody     = $('stockTblBody');
+
+    if (stocks.length === 0) {
+        empty.classList.remove('hidden');
+        tbl.style.display = 'none';
+        headRight.style.display = 'none';
+        meta.textContent = '―';
+        tbody.innerHTML = '';
+        return;
+    }
+    empty.classList.add('hidden');
+    tbl.style.display = '';
+
+    let totalCost = 0, totalValue = 0;
+    stocks.forEach(s => {
+        const c = calcStock(s);
+        totalCost  += c.cost;
+        totalValue += c.value;
+    });
+    const totalPnl  = totalValue - totalCost;
+    const totalRate = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+
+    // ヘッダー（折りたたみ時も表示）
+    headRight.style.display = '';
+    $('stockHeadValue').textContent = yen(totalValue);
+    const hPnl = $('stockHeadPnl');
+    hPnl.textContent = `損益: ${pnlStr(totalPnl)} (${rateStr(totalRate)})`;
+    hPnl.style.color = totalPnl > 0 ? '#6ee7b7' : totalPnl < 0 ? '#fca5a5' : 'rgba(255,255,255,0.75)';
+
+    meta.textContent = `${stocks.length}銘柄`;
+
+    tbody.innerHTML = stocks.map(s => {
+        const c   = calcStock(s);
+        const cls = c.pnl > 0 ? 'gain' : c.pnl < 0 ? 'loss' : 'zero';
+        const acCls = accountCls(s.account);
+        return `
+        <tr>
+            <td>${esc(s.code || '―')}</td>
+            <td>${esc(s.name)}</td>
+            <td><span class="pt-badge ${acCls}" style="font-size:10px;padding:1px 6px">${esc(s.account)}</span></td>
+            <td>${(s.shares || 0).toLocaleString()}</td>
+            <td>¥${(s.acqPrice || 0).toLocaleString()}</td>
+            <td>¥${(s.curPrice || 0).toLocaleString()}</td>
+            <td>${yen(c.value)}</td>
+            <td class="stk-pnl ${cls}">${pnlStr(c.pnl)}<br><small style="font-weight:600">${rateStr(c.rate)}</small></td>
+            <td><button class="btn-sm btn-edit-sm" onclick="openStockEdit('${s.id}')">編集</button></td>
+        </tr>`;
+    }).join('');
+}
+
+let _stockEditingId = null;
+
+function openStockEdit(id) {
+    _stockEditingId = id || null;
+    const s = id ? stocks.find(x => x.id === id) : null;
+    $('stockEditTitle').textContent = s ? '📈 株式 を編集' : '📈 株式 を追加';
+    $('stkInpCode').value    = s ? (s.code || '')      : '';
+    $('stkInpName').value    = s ? (s.name || '')      : '';
+    $('stkInpAccount').value = s ? (s.account || '持株会') : '持株会';
+    $('stkInpShares').value  = s ? (s.shares  || '')   : '';
+    $('stkInpAcq').value     = s ? (s.acqPrice || '')  : '';
+    $('stkInpCur').value     = s ? (s.curPrice || '')  : '';
+    $('btnStockDelete').classList.toggle('hidden', !s);
+    recalcStockEditPreview();
+    $('stockEditOverlay').classList.remove('hidden');
+}
+
+function recalcStockEditPreview() {
+    const shares = parseFloat($('stkInpShares').value) || 0;
+    const acq    = parseFloat($('stkInpAcq').value)    || 0;
+    const cur    = parseFloat($('stkInpCur').value)    || 0;
+    const cost   = shares * acq;
+    const value  = shares * cur;
+    const pnl    = value - cost;
+    $('stkPvCost').textContent  = yen(cost);
+    $('stkPvValue').textContent = yen(value);
+    const pnlEl = $('stkPvPnl');
+    if (cost > 0) {
+        pnlEl.textContent = pnlStr(pnl);
+        pnlEl.className   = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : '';
+    } else {
+        pnlEl.textContent = '―';
+        pnlEl.className   = '';
+    }
+}
+
+function saveStockEdit() {
+    const code     = $('stkInpCode').value.trim();
+    const name     = $('stkInpName').value.trim();
+    const account  = $('stkInpAccount').value;
+    const shares   = parseFloat($('stkInpShares').value) || 0;
+    const acqPrice = parseFloat($('stkInpAcq').value)    || 0;
+    const curPrice = parseFloat($('stkInpCur').value)    || 0;
+    if (!name)     { alert('銘柄名を入力してください'); return; }
+    if (shares <= 0)   { alert('株数を入力してください'); return; }
+    if (acqPrice <= 0) { alert('取得単価を入力してください'); return; }
+
+    if (_stockEditingId) {
+        const s = stocks.find(x => x.id === _stockEditingId);
+        if (s) Object.assign(s, { code, name, account, shares, acqPrice, curPrice });
+    } else {
+        stocks.push({ id: uid(), code, name, account, shares, acqPrice, curPrice });
+    }
+    persistStocks();
+    render();
+    $('stockEditOverlay').classList.add('hidden');
+    showToast('📈 株式を保存しました');
+}
+
+function deleteStock(id) {
+    const s = stocks.find(x => x.id === id);
+    if (!s) return;
+    if (!confirm(`${s.name} を削除しますか？`)) return;
+    stocks = stocks.filter(x => x.id !== id);
+    persistStocks();
+    render();
+    $('stockEditOverlay').classList.add('hidden');
+    showToast('🗑 株式を削除しました');
+}
+
 // ── CAGR ───────────────────────────────────────────────────────────────────
 function calcCAGR(currentValue, principal, startDate) {
     const start = new Date(startDate);
@@ -2854,9 +3250,10 @@ function generateMonthlyReport() {
     const monthPfx   = `${thisYear}-${pad2(thisMonth)}`;
     const reportLabel = `${thisYear}年${thisMonth}月`;
 
-    // Current portfolio totals
+    // Current portfolio totals（投資信託 + 株式）
     let totalCost = 0, totalValue = 0;
-    funds.forEach(f => { const c = calcFund(f); totalCost += c.cost; totalValue += c.value; });
+    funds.forEach(f  => { const c = calcFund(f);  totalCost += c.cost; totalValue += c.value; });
+    stocks.forEach(s => { const c = calcStock(s); totalCost += c.cost; totalValue += c.value; });
     const totalPnL  = totalValue - totalCost;
     const totalRate = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
 
@@ -2890,12 +3287,18 @@ function generateMonthlyReport() {
     }
 
     report += `【銘柄別損益（現在）】\n`;
-    if (funds.length === 0) {
+    if (funds.length === 0 && stocks.length === 0) {
         report += `銘柄データがありません\n`;
     } else {
         funds.forEach(f => {
             const { value, pnl, rate } = calcFund(f);
             report += `${f.name}（${f.account}口座）\n`;
+            report += `  評価額: ¥${Math.round(value).toLocaleString()}`;
+            report += `  損益: ${pnlStr(pnl)} (${rateStr(rate)})\n`;
+        });
+        stocks.forEach(s => {
+            const { value, pnl, rate } = calcStock(s);
+            report += `${s.name} 📈（${s.account}）\n`;
             report += `  評価額: ¥${Math.round(value).toLocaleString()}`;
             report += `  損益: ${pnlStr(pnl)} (${rateStr(rate)})\n`;
         });
@@ -2933,6 +3336,7 @@ const DEFAULT_SECTIONS = {
     nisaSeichouBlockBody:     true,
     tokuteiBlockBody:         true,
     dcSectionBody:            true,
+    stockSectionBody:         true,
     historySectionBody:       true,
     histTableBodyWrap:        true,
     settingsSectionBody:      true
@@ -2995,6 +3399,17 @@ $('dcEditOverlay').addEventListener('click', e => {
     if (e.target === $('dcEditOverlay')) $('dcEditOverlay').classList.add('hidden');
 });
 
+// ── 株式: 編集モーダル ──
+$('btnStockSave').addEventListener('click', saveStockEdit);
+$('btnStockCancel').addEventListener('click', () => $('stockEditOverlay').classList.add('hidden'));
+$('btnStockDelete').addEventListener('click', () => { if (_stockEditingId) deleteStock(_stockEditingId); });
+['stkInpShares','stkInpAcq','stkInpCur'].forEach(id =>
+    $(id).addEventListener('input', recalcStockEditPreview)
+);
+$('stockEditOverlay').addEventListener('click', e => {
+    if (e.target === $('stockEditOverlay')) $('stockEditOverlay').classList.add('hidden');
+});
+
 // ── Price table: auto-select on focus ──────────────────────────────────────
 $('priceTableBody').addEventListener('focusin', e => {
     if (e.target.classList.contains('price-inp')) e.target.select();
@@ -3004,7 +3419,7 @@ $('priceTableBody').addEventListener('focusin', e => {
 $('priceTableBody').addEventListener('input', e => {
     if (!e.target.classList.contains('price-inp')) return;
     const input = e.target;
-    const gi    = parseInt(input.dataset.groupIdx);
+    const stockId = input.dataset.stockId;
 
     const cleaned = input.value.replace(/[^0-9.]/g, '');
     if (cleaned !== input.value) {
@@ -3016,6 +3431,24 @@ $('priceTableBody').addEventListener('input', e => {
     const price = parseFloat(cleaned);
     if (!price || price <= 0) return;
 
+    // 株式行の処理
+    if (stockId) {
+        const s = stocks.find(x => x.id === stockId);
+        if (!s || s.curPrice === price) return;
+        s.curPrice = price;
+        persistStocks();
+        stampPriceUpdated();
+        const c     = calcStock(s);
+        const cls   = c.pnl > 0 ? 'gain' : c.pnl < 0 ? 'loss' : 'zero';
+        const pnlEl = $('pt-pnl-'  + s.id);
+        const rateEl= $('pt-rate-' + s.id);
+        if (pnlEl)  { pnlEl.textContent  = pnlStr(c.pnl);                pnlEl.className  = 'pt-pnl '  + cls; }
+        if (rateEl) { rateEl.textContent = '(' + rateStr(c.rate) + ')';  rateEl.className = 'pt-rate ' + cls; }
+        schedulePartialRender();
+        return;
+    }
+
+    const gi = parseInt(input.dataset.groupIdx);
     const group = _fundGroups[gi];
     if (!group) return;
 
