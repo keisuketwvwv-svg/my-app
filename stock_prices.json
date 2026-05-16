@@ -1,17 +1,17 @@
 {
-  "updated": "2026-05-16T09:23:00+09:00",
+  "updated": "2026-05-16T22:24:52+09:00",
   "prices": {
     "5243": {
-      "price": 525,
-      "date": "2026-05-15",
+      "price": 2297.0,
+      "date": "2026-05-14",
       "name": "note",
-      "source": "yahoo"
+      "source": "stooq"
     },
     "8308": {
-      "price": 1108,
-      "date": "2026-05-15",
+      "price": 2047.0,
+      "date": "2026-05-14",
       "name": "りそなホールディングス",
-      "source": "yahoo"
+      "source": "stooq"
     }
   }
 }
