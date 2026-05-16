@@ -1,0 +1,42 @@
+name: 株価の自動取得
+
+on:
+  schedule:
+    # 毎日 17:00 JST (= 08:00 UTC) に実行（市場クローズ後）
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+    # 手動実行も可能（テスト・緊急更新用）
+
+jobs:
+  fetch-stock-prices:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # stock_prices.json をコミットするために必要
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python 3.12 をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 依存ライブラリをインストール
+        run: pip install requests
+
+      - name: 株価を取得
+        run: python scripts/fetch_stock_prices.py
+
+      - name: stock_prices.json をコミット・プッシュ
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add stock_prices.json
+          if git diff --staged --quiet; then
+            echo "stock_prices.json に変更なし。コミットをスキップします。"
+          else
+            DATE=$(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M JST')
+            git commit -m "chore: 株価を更新 ${DATE}"
+            git push
+          fi
