@@ -1034,6 +1034,7 @@
                                     <button class="hist-ftab active" data-filter="all">すべて</button>
                                     <button class="hist-ftab" data-filter="funds">投資信託</button>
                                     <button class="hist-ftab" data-filter="dc">確定拠出年金</button>
+                                    <button class="hist-ftab" data-filter="stocks">株式</button>
                                 </div>
                             </div>
                             <div class="chart-line-wrap" style="height:260px">
@@ -1486,7 +1487,7 @@ const CHART_FONT = "-apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic Pro
 let chartFundPie = null, chartAccountPie = null, chartPnLBar = null;
 let chartValueLine = null;
 let histPeriod  = '1y';  // '1m' | '3m' | '6m' | '1y' | '3y' | '5y' | 'all'
-let histFilter  = 'all';   // 'all' | 'funds' | 'dc'
+let histFilter  = 'all';   // 'all' | 'funds' | 'dc' | 'stocks'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -2621,6 +2622,19 @@ function renderHistory() {
     renderHistTable(data);
 }
 
+function stockHistValue(h) { return (h.funds||[]).filter(f=>f.type==='stock').reduce((s,f)=>s+(f.value||0),0); }
+function stockHistCost(h)  { return (h.funds||[]).filter(f=>f.type==='stock').reduce((s,f)=>s+(f.cost||0),0); }
+function itHistValue(h) {
+    const all = h.funds || [];
+    if (!all.some(f => f.type === 'stock')) return h.value;
+    return all.filter(f => f.type !== 'stock').reduce((s, f) => s + (f.value || 0), 0);
+}
+function itHistCost(h) {
+    const all = h.funds || [];
+    if (!all.some(f => f.type === 'stock')) return h.cost;
+    return all.filter(f => f.type !== 'stock').reduce((s, f) => s + (f.cost || 0), 0);
+}
+
 function renderHistTable(data) {
     const tbody = $('histTableBody');
     if (!data || data.length === 0) {
@@ -2634,7 +2648,9 @@ function renderHistTable(data) {
         if (h.dcOnly) {
             value = dcV; cost = dcC; pnl = dcV - dcC;
         } else if (histFilter === 'funds') {
-            value = h.value; cost = h.cost; pnl = h.pnl;
+            value = itHistValue(h); cost = itHistCost(h); pnl = value - cost;
+        } else if (histFilter === 'stocks') {
+            value = stockHistValue(h); cost = stockHistCost(h); pnl = value - cost;
         } else {
             value = h.value + dcV; cost = h.cost + dcC; pnl = h.pnl + (dcV - dcC);
         }
@@ -2659,20 +2675,30 @@ function renderHistTable(data) {
 }
 
 function renderHistoryCharts(data) {
-    // 'funds' フィルター時は DC のみ行（IT 記録のない月）を除外
-    const chartData  = histFilter === 'funds' ? data.filter(h => !h.dcOnly) : data;
+    let chartData;
+    if (histFilter === 'funds') {
+        chartData = data.filter(h => !h.dcOnly);
+    } else if (histFilter === 'stocks') {
+        chartData = data.filter(h => !h.dcOnly && !h.auto && stockHistValue(h) > 0);
+    } else {
+        chartData = data;
+    }
     const labels     = chartData.map(h => histLabel(h));
     const longLabels = chartData.map(h => h.date);
 
     let values, costs, pnls;
     if (histFilter === 'funds') {
-        values = chartData.map(h => h.value);
-        costs  = chartData.map(h => h.cost);
-        pnls   = chartData.map(h => h.pnl);
+        values = chartData.map(h => itHistValue(h));
+        costs  = chartData.map(h => itHistCost(h));
+        pnls   = chartData.map(h => itHistValue(h) - itHistCost(h));
     } else if (histFilter === 'dc') {
         values = chartData.map(h => dcValueAt(h.date));
         costs  = chartData.map(h => dcContribAt(h.date));
         pnls   = chartData.map(h => dcValueAt(h.date) - dcContribAt(h.date));
+    } else if (histFilter === 'stocks') {
+        values = chartData.map(h => stockHistValue(h));
+        costs  = chartData.map(h => stockHistCost(h));
+        pnls   = chartData.map(h => stockHistValue(h) - stockHistCost(h));
     } else {
         values = chartData.map(h => h.value + dcValueAt(h.date));
         costs  = chartData.map(h => h.cost  + dcContribAt(h.date));
