@@ -1,0 +1,15 @@
+{
+  "_comment": "code: アプリ内の銘柄コードと完全一致させてください（価格の自動反映に使用）。ticker: Yahoo Finance / stooq 用ティッカー（東証は 4桁コード + .T）。ticker を省略すると code をそのまま使います。",
+  "stocks": [
+    {
+      "code": "5243",
+      "ticker": "5243.T",
+      "name": "note"
+    },
+    {
+      "code": "8308",
+      "ticker": "8308.T",
+      "name": "りそなホールディングス"
+    }
+  ]
+}

@@ -11,7 +11,12 @@
             --primary: #2563eb;
             --primary-dark: #1d4ed8;
             --nisa: #059669;
+            --nisa-old: #0284c7;
+            --nisa-tsumitate: #059669;
+            --nisa-seichou: #7c3aed;
             --tokutei: #d97706;
+            --mochikabu: #ea580c;
+            --stock: #be123c;
             --gain: #059669;
             --loss: #dc2626;
             --bg: #f1f5f9;
@@ -19,7 +24,9 @@
             --text: #0f172a;
             --text-muted: #64748b;
             --border: #e2e8f0;
-            --r: 14px;
+            --r: 10px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 12px rgba(37,99,235,0.25);
         }
 
         html { -webkit-text-size-adjust: 100%; }
@@ -29,14 +36,16 @@
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
-            padding-bottom: 100px;
+            font-size: 14px;
+            line-height: 1.5;
         }
 
         /* ── Header ── */
         .header {
             background: var(--primary);
             color: white;
-            padding: 14px 16px;
+            padding: 0 28px;
+            height: 54px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -45,14 +54,39 @@
             z-index: 100;
             box-shadow: 0 2px 8px rgba(37,99,235,0.3);
         }
-        .header h1 { font-size: 18px; font-weight: 700; }
-        .header-date { font-size: 12px; opacity: 0.75; }
+        .header-left { display: flex; align-items: center; gap: 14px; }
+        .header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+        .header-date { font-size: 13px; opacity: 0.72; }
+        .btn-add-fund {
+            display: flex; align-items: center; gap: 7px;
+            padding: 7px 16px;
+            background: white; color: var(--primary);
+            border: none; border-radius: 8px;
+            font-size: 13px; font-weight: 700;
+            cursor: pointer; font-family: inherit;
+            transition: opacity 0.15s;
+        }
+        .btn-add-fund:hover { opacity: 0.88; }
 
-        /* ── Main ── */
+        /* ── 3-Column Grid Layout ── */
         main {
-            padding: 16px;
-            max-width: 600px;
+            padding: 20px 24px 48px;
+            max-width: 1440px;
             margin: 0 auto;
+            display: grid;
+            grid-template-columns: 272px 1fr 284px;
+            grid-template-areas: "left mid right" "bottom bottom bottom";
+            gap: 16px;
+            align-items: start;
+        }
+        .col-left   { grid-area: left;   display: flex; flex-direction: column; gap: 14px; }
+        .col-mid    { grid-area: mid;    display: flex; flex-direction: column; gap: 14px; }
+        .col-right  { grid-area: right;  display: flex; flex-direction: column; gap: 14px; }
+        .col-full   { grid-area: bottom; display: flex; flex-direction: column; gap: 14px; }
+        .accounts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
         }
 
         /* ── Portfolio Summary Card ── */
@@ -60,317 +94,419 @@
             background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             color: white;
             border-radius: var(--r);
-            padding: 20px 16px;
-            margin-bottom: 16px;
-            box-shadow: 0 4px 16px rgba(37,99,235,0.3);
+            padding: 18px 16px;
+            box-shadow: var(--shadow-md);
         }
         .section-label {
-            font-size: 11px;
-            opacity: 0.75;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 4px;
+            font-size: 10px; opacity: 0.72;
+            text-transform: uppercase; letter-spacing: 1.2px;
+            margin-bottom: 4px; font-weight: 600;
         }
         .total-value {
-            font-size: 32px;
-            font-weight: 800;
-            margin-bottom: 16px;
-            letter-spacing: -0.5px;
+            font-size: 28px; font-weight: 800;
+            margin-bottom: 12px; letter-spacing: -0.5px; line-height: 1;
         }
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 7px;
         }
         .stat-item {
             background: rgba(255,255,255,0.13);
-            border-radius: 10px;
-            padding: 10px 12px;
+            border-radius: 7px; padding: 8px 10px;
         }
-        .stat-item .stat-label { font-size: 11px; opacity: 0.72; margin-bottom: 3px; }
-        .stat-item .stat-value { font-size: 16px; font-weight: 700; }
+        .stat-item .stat-label { font-size: 10px; opacity: 0.72; margin-bottom: 2px; }
+        .stat-item .stat-value { font-size: 14px; font-weight: 700; }
         .stat-item .stat-value.gain { color: #6ee7b7; }
         .stat-item .stat-value.loss { color: #fca5a5; }
 
+        .cagr-row {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 10px; padding: 8px 10px;
+            background: rgba(255,255,255,0.13); border-radius: 7px;
+        }
+        .cagr-row.hidden { display: none; }
+        .cagr-label { font-size: 11px; opacity: 0.72; }
+        .cagr-value { font-size: 14px; font-weight: 700; }
+        .cagr-value.gain { color: #6ee7b7; }
+        .cagr-value.loss { color: #fca5a5; }
+
+        .goal-progress-wrap {
+            margin-top: 10px; padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.18);
+        }
+        .goal-progress-wrap.hidden { display: none; }
+        .goal-progress-label {
+            display: flex; justify-content: space-between;
+            font-size: 11px; opacity: 0.85; margin-bottom: 6px;
+        }
+        .progress-bar { height: 7px; background: rgba(255,255,255,0.2); border-radius: 4px; overflow: hidden; }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6ee7b7, #10b981);
+            border-radius: 4px; transition: width 0.4s ease;
+        }
+
+        .after-tax-section {
+            margin-top: 10px; padding: 10px;
+            background: rgba(255,255,255,0.1); border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.18);
+        }
+        .after-tax-section.hidden { display: none; }
+        .after-tax-title {
+            font-size: 10px; opacity: 0.72; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 7px;
+        }
+        .after-tax-row {
+            display: flex; justify-content: space-between; align-items: baseline;
+            margin-bottom: 4px; font-size: 12px;
+        }
+        .after-tax-row:last-child { margin-bottom: 0; }
+        .after-tax-label { opacity: 0.78; }
+        .after-tax-val { font-weight: 700; font-size: 13px; }
+        .after-tax-val.gain { color: #6ee7b7; }
+        .after-tax-val.muted { opacity: 0.65; font-size: 11px; font-weight: 500; }
+
+        /* ── NISA ダッシュボード枠サマリー ── */
+        .nisa-dash-quota {
+            margin-top: 10px; padding: 10px;
+            background: rgba(255,255,255,0.1); border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.18);
+        }
+        .nisa-dash-quota.hidden { display: none; }
+        .nisa-dash-title { font-size: 10px; opacity: 0.72; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+        .ndq-row { margin-bottom: 8px; }
+        .ndq-row:last-child { margin-bottom: 0; }
+        .ndq-total-row { padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2); margin-top: 4px; }
+        .ndq-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; margin-bottom: 3px; }
+        .ndq-label { font-weight: 600; opacity: 0.95; }
+        .ndq-limit { font-weight: 400; opacity: 0.6; font-size: 10px; }
+        .ndq-right { font-weight: 700; font-size: 11px; }
+        .ndq-bar { height: 7px; background: rgba(255,255,255,0.2); border-radius: 4px; overflow: hidden; margin-bottom: 3px; }
+        .ndq-fill { height: 100%; border-radius: 4px; transition: width 0.35s; }
+        .ndq-fill.ndq-ts    { background: #34d399; }
+        .ndq-fill.ndq-sc    { background: #c084fc; }
+        .ndq-fill.ndq-total { background: #60a5fa; }
+        .ndq-sub { display: flex; justify-content: space-between; font-size: 10px; opacity: 0.72; }
+        .ndq-sub .ndq-over  { color: #fca5a5; font-weight: 700; opacity: 1; }
+
+        /* ── Action Bar ── */
+        .action-bar { display: flex; flex-direction: column; gap: 5px; }
+        .btn-action {
+            display: flex; align-items: center; gap: 9px;
+            width: 100%; padding: 9px 13px;
+            border-radius: 8px; font-size: 13px; font-weight: 600;
+            border: 1px solid transparent;
+            cursor: pointer; font-family: inherit;
+            transition: opacity 0.15s;
+        }
+        .btn-action:hover { opacity: 0.82; }
+        .btn-action .btn-icon-lg { font-size: 14px; }
+        .btn-save-act    { background: #eff6ff; color: var(--primary);  border-color: #bfdbfe; }
+        .btn-csv-act     { background: #f0fdf4; color: #047857;         border-color: #bbf7d0; }
+        .btn-reset-act   { background: #fef2f2; color: var(--loss);     border-color: #fecaca; }
+        .btn-report-act  { background: #f5f3ff; color: #7c3aed;         border-color: #ddd6fe; }
+        .btn-backup-act  { background: #fff7ed; color: #c2410c;         border-color: #fed7aa; }
+        .btn-restore-act { background: #faf5ff; color: #6d28d9;         border-color: #e9d5ff; }
+
+        .btn-reset-danger {
+            display: block; width: 100%; margin-top: 10px; padding: 7px 12px;
+            background: none; color: #b91c1c; border: 1px solid #fecaca;
+            border-radius: 7px; font-size: 12px; font-weight: 600;
+            cursor: pointer; font-family: inherit; text-align: center;
+            transition: background 0.15s, color 0.15s;
+        }
+        .btn-reset-danger:hover { background: #fef2f2; }
+
+        /* ── Settings ── */
+        .settings-section {
+            background: var(--card); border-radius: var(--r);
+            box-shadow: var(--shadow); overflow: hidden;
+        }
+        .settings-head {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 14px; background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px; font-weight: 700;
+        }
+        .settings-body { padding: 14px; }
+        .settings-field { margin-bottom: 10px; }
+        .settings-field label {
+            display: block; font-size: 11px; font-weight: 600;
+            color: var(--text-muted); margin-bottom: 4px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .settings-field input {
+            display: block; width: 100%; padding: 8px 10px;
+            border: 1.5px solid var(--border); border-radius: 7px;
+            font-size: 13px; color: var(--text); background: white;
+            font-family: inherit; transition: border-color 0.15s;
+        }
+        .settings-field input:focus { outline: none; border-color: var(--primary); }
+        .btn-settings-save {
+            width: 100%; padding: 9px; background: var(--primary);
+            color: white; border: none; border-radius: 7px;
+            font-size: 13px; font-weight: 700; cursor: pointer;
+            font-family: inherit; margin-top: 10px;
+            transition: background 0.15s;
+        }
+        .btn-settings-save:hover { background: var(--primary-dark); }
+
+        /* ── Price Section ── */
+        .price-section {
+            background: var(--card); border-radius: var(--r);
+            box-shadow: var(--shadow); overflow: hidden;
+        }
+        .price-section.hidden { display: none; }
+        .price-sec-head {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 14px; background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+        }
+        .price-sec-title { font-size: 13px; font-weight: 700; }
+        .last-updated { font-size: 11px; color: var(--text-muted); }
+        .price-tbl-wrap { overflow-x: auto; }
+        .price-tbl { width: 100%; border-collapse: collapse; }
+        .price-tbl th {
+            font-size: 10px; font-weight: 700; color: var(--text-muted);
+            text-align: left; padding: 7px 12px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap; background: #fafafa;
+        }
+        .price-tbl th:last-child { text-align: right; }
+        .price-tbl td {
+            padding: 9px 12px; border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        .price-tbl tr:last-child td { border-bottom: none; }
+        .price-tbl tbody tr:hover td { background: #f8fbff; }
+
+        .pt-name-text { font-size: 13px; font-weight: 600; line-height: 1.35; margin-bottom: 4px; }
+        .pt-meta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+        .pt-badge {
+            font-size: 10px; font-weight: 700; padding: 2px 5px;
+            border-radius: 4px; color: white; flex-shrink: 0;
+        }
+        .pt-badge.nisa-old       { background: var(--nisa-old); }
+        .pt-badge.nisa-tsumitate { background: var(--nisa-tsumitate); }
+        .pt-badge.nisa-seichou   { background: var(--nisa-seichou); }
+        .pt-badge.tokutei        { background: var(--tokutei); }
+        .pt-badge.mochikabu      { background: var(--mochikabu); }
+        .pt-badge.dc             { background: #0f766e; }
+        .pt-yahoo { font-size: 10px; color: var(--primary); text-decoration: none; white-space: nowrap; }
+        .pt-yahoo:hover { text-decoration: underline; }
+
+        .price-inp {
+            width: 100%; min-width: 88px; padding: 6px 9px;
+            border: 1.5px solid var(--border); border-radius: 7px;
+            font-size: 14px; font-weight: 700; color: var(--text);
+            background: var(--bg); font-family: inherit; text-align: right;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .price-inp:focus { outline: none; border-color: var(--primary); background: white; }
+
+        .pt-pnl-col { text-align: right; }
+        .pt-pnl  { font-size: 13px; font-weight: 800; display: block; white-space: nowrap; }
+        .pt-rate { font-size: 11px; font-weight: 600; display: block; margin-top: 1px; white-space: nowrap; }
+        .pt-pnl.gain, .pt-rate.gain { color: var(--gain); }
+        .pt-pnl.loss, .pt-rate.loss { color: var(--loss); }
+        .pt-pnl.zero, .pt-rate.zero { color: var(--text-muted); }
+
         /* ── Account Block ── */
-        .account-block {
-            margin-bottom: 16px;
-            border-radius: var(--r);
-            overflow: hidden;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-        }
+        .account-block { border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow); }
         .account-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 14px;
-            color: white;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 14px; color: white;
         }
-        .account-head.nisa    { background: var(--nisa); }
-        .account-head.tokutei { background: var(--tokutei); }
-        .account-head h2 { font-size: 15px; font-weight: 700; }
+        .account-head.nisa-old       { background: var(--nisa-old); }
+        .account-head.nisa-tsumitate { background: var(--nisa-tsumitate); }
+        .account-head.nisa-seichou   { background: var(--nisa-seichou); }
+        .account-head.tokutei        { background: var(--tokutei); }
+        .account-head h2 { font-size: 14px; font-weight: 700; }
         .account-head-right { text-align: right; font-size: 12px; }
-        .acc-value { font-size: 15px; font-weight: 700; margin-bottom: 1px; }
+        .acc-value { font-size: 14px; font-weight: 700; margin-bottom: 1px; }
+
+        /* ── NISA 枠使用状況パネル ── */
+        .nisa-quota { padding: 11px 13px; background: #f8fafc; border-bottom: 1px solid var(--border); }
+        .nisa-quota:empty { display: none; }
+        .quota-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; margin-bottom: 6px; gap: 8px; }
+        .quota-label { color: var(--text-muted); font-weight: 600; }
+        .quota-amount { font-weight: 700; color: var(--text); font-size: 12px; font-variant-numeric: tabular-nums; }
+        .quota-bar { display: flex; height: 14px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+        .quota-seg { height: 100%; transition: width 0.3s; }
+        .quota-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+        .quota-remain { font-weight: 700; }
+        .quota-remain.gain { color: #059669; }
+        .quota-remain.loss { color: #dc2626; }
+        .quota-breakdown { display: grid; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); }
+        .quota-bd-row {
+            display: grid; grid-template-columns: 10px 1fr auto auto;
+            gap: 8px; align-items: center; font-size: 11px;
+        }
+        .quota-bd-color { width: 10px; height: 10px; border-radius: 2px; }
+        .quota-bd-name { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .quota-bd-amount { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+        .quota-bd-pct { color: var(--text-muted); font-variant-numeric: tabular-nums; min-width: 42px; text-align: right; }
+
+        /* ── 特定口座 売却時（税引き後）パネル ── */
+        .tokutei-aftertax {
+            background: #fffbeb; border-bottom: 1px solid var(--border);
+            padding: 11px 14px;
+        }
+        .tokutei-aftertax.hidden { display: none; }
+        .ta-title { font-size: 11px; font-weight: 700; color: #92400e; margin-bottom: 8px; letter-spacing: 0.4px; }
+        .ta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .ta-cell { display: flex; flex-direction: column; min-width: 0; }
+        .ta-label { font-size: 10px; color: var(--text-muted); margin-bottom: 2px; font-weight: 600; }
+        .ta-value { font-size: 13px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+        .ta-value.gain { color: var(--gain); }
+        .ta-value.loss { color: var(--loss); }
+        .ta-value.muted { font-size: 12px; color: var(--text-muted); font-weight: 600; }
 
         /* ── Fund List ── */
         .fund-list { background: var(--card); }
-
-        .fund-item {
-            padding: 14px;
-            border-bottom: 1px solid var(--border);
-        }
+        .fund-item { padding: 12px 14px; border-bottom: 1px solid var(--border); }
         .fund-item:last-child { border-bottom: none; }
+        .fund-item:hover { background: #fafbff; }
 
         .fund-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 8px;
         }
-        .fund-name {
-            font-size: 14px;
-            font-weight: 600;
-            line-height: 1.45;
-            flex: 1;
-            margin-right: 10px;
-        }
-        .fund-buttons { display: flex; gap: 6px; flex-shrink: 0; }
+        .fund-name { font-size: 13px; font-weight: 600; line-height: 1.45; flex: 1; margin-right: 10px; }
+        .fund-buttons { display: flex; gap: 5px; flex-shrink: 0; }
 
         .btn-sm {
-            padding: 5px 10px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            font-family: inherit;
+            padding: 4px 10px; border-radius: 6px;
+            font-size: 12px; font-weight: 600;
+            border: none; cursor: pointer; font-family: inherit;
+            transition: opacity 0.15s;
         }
-        .btn-sm:active { opacity: 0.65; }
+        .btn-sm:hover { opacity: 0.8; }
         .btn-edit-sm { background: #eff6ff; color: var(--primary); }
         .btn-del-sm  { background: #fef2f2; color: var(--loss); }
 
         .fund-data {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-            margin-bottom: 8px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px; margin-bottom: 7px;
         }
-        .data-cell {
-            background: var(--bg);
-            border-radius: 8px;
-            padding: 8px 10px;
-        }
+        .data-cell { background: var(--bg); border-radius: 6px; padding: 6px 9px; }
         .data-cell .cell-label { font-size: 10px; color: var(--text-muted); margin-bottom: 2px; }
-        .data-cell .cell-value { font-size: 13px; font-weight: 600; }
+        .data-cell .cell-value { font-size: 12px; font-weight: 600; }
 
         .pnl-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 9px 10px;
-            border-radius: 8px;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 7px 9px; border-radius: 6px;
         }
         .pnl-row.gain { background: #f0fdf4; }
         .pnl-row.loss { background: #fef2f2; }
         .pnl-row.zero { background: var(--bg); }
-        .pnl-left { font-size: 12px; color: var(--text-muted); }
-        .pnl-right { font-size: 15px; font-weight: 800; }
+        .pnl-left { font-size: 11px; color: var(--text-muted); }
+        .pnl-right { font-size: 14px; font-weight: 800; }
         .pnl-right.gain { color: var(--gain); }
         .pnl-right.loss { color: var(--loss); }
         .pnl-right.zero { color: var(--text-muted); }
-        .pnl-rate { font-size: 12px; font-weight: 600; margin-left: 4px; }
+        .pnl-rate { font-size: 11px; font-weight: 600; margin-left: 4px; }
         .pnl-rate.gain { color: var(--gain); }
         .pnl-rate.loss { color: var(--loss); }
         .pnl-rate.zero { color: var(--text-muted); }
 
-        /* ── Empty State ── */
         .empty {
-            background: var(--card);
-            padding: 28px 16px;
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 13px;
+            background: var(--card); padding: 32px 16px;
+            text-align: center; color: var(--text-muted); font-size: 13px;
         }
 
-        /* ── Price Update Table ── */
-        .price-section {
-            background: var(--card);
-            border-radius: var(--r);
-            margin-bottom: 16px;
-            overflow: hidden;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        /* ── Charts (Right Column) ── */
+        .charts-section { display: flex; flex-direction: column; gap: 12px; }
+        .charts-section.hidden { display: none; }
+        .charts-head {
+            font-size: 11px; font-weight: 700; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.8px;
+            display: flex; justify-content: space-between; align-items: center;
         }
-        .price-section.hidden { display: none; }
-
-        .price-sec-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 11px 14px;
-            background: var(--bg);
-            border-bottom: 1px solid var(--border);
+        .chart-card {
+            background: var(--card); border-radius: var(--r);
+            padding: 14px 14px 16px; box-shadow: var(--shadow);
         }
-        .price-sec-title { font-size: 14px; font-weight: 700; }
-        .last-updated { font-size: 11px; color: var(--text-muted); }
-
-        .price-tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-
-        .price-tbl {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 300px;
-        }
-        .price-tbl th {
-            font-size: 10px;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-align: left;
-            padding: 7px 12px;
-            border-bottom: 1px solid var(--border);
-            white-space: nowrap;
-        }
-        .price-tbl th:last-child { text-align: right; }
-        .price-tbl td {
-            padding: 10px 12px;
-            border-bottom: 1px solid var(--border);
-            vertical-align: middle;
-        }
-        .price-tbl tr:last-child td { border-bottom: none; }
-
-        .pt-name-text {
-            font-size: 13px;
-            font-weight: 600;
-            line-height: 1.35;
-            margin-bottom: 5px;
-        }
-        .pt-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-        .pt-badge {
-            font-size: 10px;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: white;
-            flex-shrink: 0;
-        }
-        .pt-badge.nisa    { background: var(--nisa); }
-        .pt-badge.tokutei { background: var(--tokutei); }
-
-        .pt-yahoo {
-            font-size: 10px;
-            color: var(--primary);
-            text-decoration: none;
-            white-space: nowrap;
-        }
-        .pt-yahoo:active { opacity: 0.65; }
-
-        .price-inp {
-            width: 100%;
-            min-width: 84px;
-            padding: 9px 10px;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 700;
-            color: var(--text);
-            background: var(--bg);
-            font-family: inherit;
-            text-align: right;
-            transition: border-color 0.15s, background 0.15s;
-            -webkit-appearance: none;
-            appearance: none;
-        }
-        .price-inp:focus {
-            outline: none;
-            border-color: var(--primary);
-            background: white;
-        }
-
-        .pt-pnl-col { text-align: right; }
-        .pt-pnl  { font-size: 13px; font-weight: 800; display: block; white-space: nowrap; }
-        .pt-rate { font-size: 11px; font-weight: 600; display: block; margin-top: 1px; white-space: nowrap; }
-        .pt-pnl.gain,  .pt-rate.gain  { color: var(--gain); }
-        .pt-pnl.loss,  .pt-rate.loss  { color: var(--loss); }
-        .pt-pnl.zero,  .pt-rate.zero  { color: var(--text-muted); }
-
-        /* ── History / Time-Series ── */
-        .history-section { margin-bottom: 16px; }
-
-        .history-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .history-head-label {
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-        }
-        .btn-record {
-            padding: 9px 14px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: 700;
-            cursor: pointer;
-            font-family: inherit;
-            white-space: nowrap;
-        }
-        .btn-record:active { opacity: 0.8; }
-
-        .chart-line-wrap { position: relative; height: 200px; }
-
+        .chart-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
         .chart-title-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 14px;
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
         }
         .chart-title-row .chart-title { margin-bottom: 0; }
+        .chart-pie-wrap { max-width: 220px; margin: 0 auto; }
+        .chart-bar-wrap { position: relative; min-height: 110px; }
+        .chart-line-wrap { position: relative; height: 220px; }
+
+        /* ── History Section (Full Width) ── */
+        .history-section {
+            background: var(--card); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden;
+        }
+        .history-head {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 16px; background: #f8fafc; border-bottom: 1px solid var(--border);
+        }
+        .history-head-label { font-size: 13px; font-weight: 700; color: var(--text); }
+        .history-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+        .history-charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+        /* ── History Period Tabs ── */
+        .hist-period-tabs { display: flex; gap: 4px; margin-bottom: 14px; flex-wrap: wrap; }
+        .hist-tab {
+            padding: 4px 10px; border-radius: 20px;
+            font-size: 11px; font-weight: 700;
+            border: 1.5px solid var(--border);
+            background: white; color: var(--text-muted);
+            cursor: pointer; font-family: inherit;
+            transition: all 0.15s;
+        }
+        .hist-tab:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+        .hist-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        .hist-chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+        .hist-chart-header .chart-title { margin-bottom: 0; }
+        .hist-filter-tabs { display: flex; gap: 4px; }
+        .hist-ftab {
+            padding: 3px 10px; border-radius: 20px;
+            font-size: 11px; font-weight: 700;
+            border: 1.5px solid var(--border);
+            background: white; color: var(--text-muted);
+            cursor: pointer; font-family: inherit;
+            transition: all 0.15s;
+        }
+        .hist-ftab:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+        .hist-ftab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        .btn-record {
+            padding: 7px 14px; background: var(--primary); color: white;
+            border: none; border-radius: 7px; font-size: 13px; font-weight: 700;
+            cursor: pointer; font-family: inherit; transition: background 0.15s;
+        }
+        .btn-record:hover { background: var(--primary-dark); }
 
         .btn-csv-hist {
-            font-size: 11px;
-            font-weight: 700;
-            padding: 5px 10px;
-            border-radius: 6px;
-            background: #f0fdf4;
-            color: #047857;
-            border: none;
-            cursor: pointer;
-            font-family: inherit;
+            font-size: 11px; font-weight: 700; padding: 5px 10px;
+            border-radius: 6px; background: #f0fdf4; color: #047857;
+            border: 1px solid #bbf7d0; cursor: pointer; font-family: inherit;
+            transition: opacity 0.15s;
         }
-        .btn-csv-hist:active { opacity: 0.7; }
+        .btn-csv-hist:hover { opacity: 0.8; }
 
-        .hist-tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .hist-tbl {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 280px;
-        }
+        .hist-tbl-wrap { overflow-x: auto; max-height: 265px; overflow-y: auto; }
+        .hist-tbl { width: 100%; border-collapse: collapse; }
         .hist-tbl th {
-            font-size: 10px;
-            font-weight: 700;
-            color: var(--text-muted);
-            padding: 7px 10px;
-            border-bottom: 1px solid var(--border);
-            white-space: nowrap;
-            text-align: right;
+            font-size: 11px; font-weight: 700; color: var(--text-muted);
+            padding: 7px 12px; border-bottom: 1px solid var(--border);
+            white-space: nowrap; text-align: right; background: #fafafa;
         }
         .hist-tbl th:first-child { text-align: left; }
         .hist-tbl th:last-child  { text-align: center; }
         .hist-tbl td {
-            padding: 9px 10px;
-            border-bottom: 1px solid var(--border);
-            font-size: 13px;
-            text-align: right;
-            white-space: nowrap;
-            vertical-align: middle;
+            padding: 8px 12px; border-bottom: 1px solid var(--border);
+            font-size: 13px; text-align: right; white-space: nowrap; vertical-align: middle;
         }
         .hist-tbl tr:last-child td { border-bottom: none; }
+        .hist-tbl tbody tr:hover td { background: #fafbff; }
         .hist-tbl td:first-child { text-align: left; font-weight: 600; color: var(--text-muted); }
         .hist-tbl td:last-child  { text-align: center; }
         .hist-value { font-weight: 700; color: var(--text); }
@@ -378,252 +514,146 @@
         .hist-pnl.loss, .hist-rate.loss { color: var(--loss); font-weight: 700; }
         .hist-pnl.zero, .hist-rate.zero { color: var(--text-muted); }
 
+        .hist-row { cursor: pointer; }
+        .hist-row:hover td { background: #eff6ff !important; }
+
         .btn-hist-del {
-            font-size: 11px;
-            padding: 4px 8px;
-            border-radius: 5px;
-            background: #fef2f2;
-            color: var(--loss);
-            border: none;
-            cursor: pointer;
-            font-family: inherit;
+            font-size: 11px; padding: 3px 8px; border-radius: 5px;
+            background: #fef2f2; color: var(--loss); border: none;
+            cursor: pointer; font-family: inherit; transition: opacity 0.15s;
         }
-        .btn-hist-del:active { opacity: 0.65; }
+        .btn-hist-del:hover { opacity: 0.8; }
 
-        /* ── FAB ── */
-        .fab {
-            position: fixed;
-            bottom: 28px;
-            right: 20px;
-            width: 54px;
-            height: 54px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: white;
-            border: none;
-            font-size: 28px;
-            cursor: pointer;
-            box-shadow: 0 4px 16px rgba(37,99,235,0.45);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 50;
-            font-family: inherit;
-            line-height: 1;
+        .auto-hist-badge {
+            display: inline-block; font-size: 11px; font-weight: 700;
+            padding: 2px 8px; border-radius: 20px;
+            background: #f0fdf4; color: #047857; border: 1px solid #bbf7d0;
+            white-space: nowrap;
         }
-        .fab:active { transform: scale(0.93); }
 
-        /* ── Bottom Sheet Modal ── */
+        .edit-qty-inp {
+            width: 100%; padding: 6px 8px;
+            border: 1.5px solid var(--border); border-radius: 6px;
+            font-size: 13px; font-family: inherit; color: var(--text);
+            transition: border-color 0.15s;
+        }
+        .edit-qty-inp:focus { outline: none; border-color: var(--primary); }
+
+        /* ── 内訳ポップアップ ── */
+        .detail-summary {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 8px; margin-bottom: 16px;
+        }
+        .detail-stat {
+            background: var(--bg); border-radius: 8px; padding: 10px 12px;
+        }
+        .detail-stat .ds-label { font-size: 10px; color: var(--text-muted); margin-bottom: 3px; font-weight: 600; text-transform: uppercase; }
+        .detail-stat .ds-value { font-size: 15px; font-weight: 700; }
+        .detail-tbl { width: 100%; border-collapse: collapse; }
+        .detail-tbl th {
+            font-size: 10px; font-weight: 700; color: var(--text-muted);
+            padding: 6px 10px; border-bottom: 2px solid var(--border);
+            text-align: right; background: #fafafa; white-space: nowrap;
+        }
+        .detail-tbl th:first-child { text-align: left; }
+        .detail-tbl td {
+            padding: 9px 10px; border-bottom: 1px solid var(--border);
+            font-size: 12px; text-align: right; vertical-align: middle;
+        }
+        .detail-tbl tr:last-child td { border-bottom: none; }
+        .detail-tbl td:first-child { text-align: left; font-weight: 600; max-width: 160px; }
+        .detail-no-data { text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px; }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed; bottom: 28px; left: 50%;
+            transform: translateX(-50%) translateY(12px);
+            background: #1e293b; color: white;
+            padding: 10px 22px; border-radius: 24px;
+            font-size: 14px; font-weight: 600;
+            opacity: 0; transition: opacity 0.22s, transform 0.22s;
+            z-index: 300; white-space: nowrap; pointer-events: none;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* ── Modal (Centered Dialog) ── */
         .overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 200;
-            display: flex;
-            align-items: flex-end;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.45); z-index: 200;
+            display: flex; align-items: center; justify-content: center; padding: 24px;
         }
         .overlay.hidden { display: none; }
-
         .sheet {
-            background: white;
-            width: 100%;
-            max-width: 600px;
-            margin: 0 auto;
-            border-radius: 20px 20px 0 0;
-            padding: 12px 16px 48px;
-            max-height: 95vh;
-            overflow-y: auto;
+            background: white; width: 100%; max-width: 480px;
+            border-radius: 14px; padding: 24px 24px 28px;
+            max-height: 88vh; overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
         }
-        .sheet-handle {
-            width: 40px;
-            height: 4px;
-            background: var(--border);
-            border-radius: 2px;
-            margin: 0 auto 16px;
-        }
-        .sheet h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+        .sheet-handle { display: none; }
+        .sheet h2 { font-size: 17px; font-weight: 700; margin-bottom: 18px; }
 
         /* ── Form ── */
         .field { margin-bottom: 14px; }
         .field label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            display: block; font-size: 11px; font-weight: 600;
+            color: var(--text-muted); margin-bottom: 5px;
+            text-transform: uppercase; letter-spacing: 0.5px;
         }
-        .field input,
-        .field select {
-            display: block;
-            width: 100%;
-            padding: 13px 14px;
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            font-size: 16px;
-            color: var(--text);
-            background: white;
-            font-family: inherit;
-            -webkit-appearance: none;
-            appearance: none;
-            transition: border-color 0.15s;
+        .field input, .field select {
+            display: block; width: 100%; padding: 9px 12px;
+            border: 1.5px solid var(--border); border-radius: 8px;
+            font-size: 14px; color: var(--text); background: white;
+            font-family: inherit; transition: border-color 0.15s;
         }
-        .field input:focus,
-        .field select:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
+        .field input:focus, .field select:focus { outline: none; border-color: var(--primary); }
         .field .hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 
         .select-wrap { position: relative; }
         .select-wrap::after {
-            content: '▾';
-            position: absolute;
-            right: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            pointer-events: none;
-            color: var(--text-muted);
+            content: '▾'; position: absolute; right: 12px; top: 50%;
+            transform: translateY(-50%); pointer-events: none; color: var(--text-muted);
         }
 
-        /* ── Preview Box ── */
-        .preview {
-            background: var(--bg);
-            border-radius: 10px;
-            padding: 12px 14px;
-            margin-bottom: 14px;
-        }
+        .preview { background: var(--bg); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; }
         .preview.hidden { display: none; }
         .preview-title {
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
+            font-size: 11px; font-weight: 700; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
         }
-        .preview-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 13px;
-            margin-bottom: 5px;
-        }
+        .preview-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
         .preview-row:last-child {
-            margin-bottom: 0;
-            padding-top: 8px;
-            margin-top: 3px;
-            border-top: 1px solid var(--border);
-            font-size: 15px;
-            font-weight: 700;
+            margin-bottom: 0; padding-top: 8px; margin-top: 3px;
+            border-top: 1px solid var(--border); font-size: 14px; font-weight: 700;
         }
 
-        /* ── Buttons ── */
         .btn-save {
-            display: block;
-            width: 100%;
-            padding: 15px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            font-family: inherit;
+            display: block; width: 100%; padding: 12px;
+            background: var(--primary); color: white; border: none; border-radius: 9px;
+            font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+            transition: background 0.15s;
         }
-        .btn-save:active { background: var(--primary-dark); }
-
+        .btn-save:hover { background: var(--primary-dark); }
         .btn-cancel {
-            display: block;
-            width: 100%;
-            padding: 15px;
-            background: none;
-            color: var(--text-muted);
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            font-family: inherit;
-            margin-top: 10px;
+            display: block; width: 100%; padding: 12px;
+            background: none; color: var(--text-muted);
+            border: 1.5px solid var(--border); border-radius: 9px;
+            font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
+            margin-top: 8px; transition: border-color 0.15s;
         }
+        .btn-cancel:hover { border-color: var(--text-muted); }
 
-        /* ── Action Bar ── */
-        .action-bar {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-        .btn-action {
-            flex: 1;
-            padding: 11px 6px;
-            border-radius: 10px;
-            font-size: 12px;
-            font-weight: 700;
-            border: none;
-            cursor: pointer;
-            font-family: inherit;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 3px;
-            transition: opacity 0.15s, transform 0.1s;
-            line-height: 1.2;
-        }
-        .btn-action:active { opacity: 0.65; transform: scale(0.96); }
-        .btn-action .btn-icon-lg { font-size: 18px; }
-        .btn-save-act  { background: #eff6ff; color: var(--primary); }
-        .btn-csv-act   { background: #f0fdf4; color: #047857; }
-        .btn-reset-act { background: #fef2f2; color: var(--loss); }
-
-        /* ── Toast ── */
-        .toast {
-            position: fixed;
-            bottom: 96px;
-            left: 50%;
-            transform: translateX(-50%) translateY(12px);
-            background: #1e293b;
-            color: white;
-            padding: 10px 22px;
-            border-radius: 24px;
-            font-size: 14px;
-            font-weight: 600;
-            opacity: 0;
-            transition: opacity 0.22s, transform 0.22s;
-            z-index: 300;
-            white-space: nowrap;
-            pointer-events: none;
-        }
-        .toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        /* ── Collapsible Sections ── */
-        .sec-toggle-head {
-            cursor: pointer;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .sec-toggle-head:active { opacity: 0.82; }
+        /* ── Collapsible ── */
+        .sec-toggle-head { cursor: pointer; user-select: none; -webkit-user-select: none; }
+        .sec-toggle-head:hover { opacity: 0.88; }
         .sec-right { display: flex; align-items: center; gap: 8px; }
-        .chevron {
-            font-size: 11px;
-            flex-shrink: 0;
-            margin-left: 4px;
-            opacity: 0.75;
-        }
+        .chevron { font-size: 11px; flex-shrink: 0; opacity: 0.6; }
         .sec-body.collapsed { display: none; }
 
         /* ── Grouped Price Table ── */
         .pt-group-head-row > td:first-child { padding-bottom: 4px; border-bottom: none; }
         .pt-sub-row td {
-            padding: 5px 12px 5px 22px;
-            background: #f8fafc;
-            font-size: 12px;
-            border-bottom: 1px solid var(--border);
+            padding: 5px 12px 5px 24px; background: #f8fafc;
+            font-size: 12px; border-bottom: 1px solid var(--border);
         }
         .pt-sub-row:last-child td { border-bottom: none; }
         .pt-sub-info { display: flex; align-items: center; gap: 8px; }
@@ -633,422 +663,658 @@
 
         /* ── Auto-price badge ── */
         .auto-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 3px;
-            font-size: 10px;
-            font-weight: 700;
-            padding: 2px 7px;
-            border-radius: 20px;
-            background: #f0fdf4;
-            color: #047857;
-            border: 1px solid #bbf7d0;
-            white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 3px;
+            font-size: 10px; font-weight: 700; padding: 2px 7px;
+            border-radius: 20px; background: #f0fdf4; color: #047857;
+            border: 1px solid #bbf7d0; white-space: nowrap;
         }
         .auto-badge.stale { background: #fefce8; color: #a16207; border-color: #fde68a; }
         .btn-auto-fetch {
-            font-size: 11px;
-            font-weight: 700;
-            padding: 4px 10px;
-            border-radius: 6px;
-            background: #eff6ff;
-            color: var(--primary);
-            border: 1px solid #bfdbfe;
-            cursor: pointer;
-            font-family: inherit;
-            white-space: nowrap;
+            font-size: 11px; font-weight: 700; padding: 4px 10px;
+            border-radius: 6px; background: #eff6ff; color: var(--primary);
+            border: 1px solid #bfdbfe; cursor: pointer; font-family: inherit;
+            white-space: nowrap; transition: opacity 0.15s;
         }
-        .btn-auto-fetch:active { opacity: 0.7; }
+        .btn-auto-fetch:hover { opacity: 0.8; }
         .btn-auto-fetch.loading { opacity: 0.6; pointer-events: none; }
 
-        /* ── Goal Progress ── */
-        .goal-progress-wrap {
-            margin-top: 14px;
-            padding-top: 14px;
-            border-top: 1px solid rgba(255,255,255,0.18);
+        /* ── 確定拠出年金 セクション ── */
+        :root { --dc: #0f766e; }
+        .dc-section {
+            background: var(--card); border-radius: var(--r);
+            box-shadow: var(--shadow); overflow: hidden;
         }
-        .goal-progress-wrap.hidden { display: none; }
-        .goal-progress-label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            opacity: 0.85;
-            margin-bottom: 6px;
+        .dc-head {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--dc); color: white; padding: 12px 16px;
         }
-        .progress-bar {
-            height: 8px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 4px;
-            overflow: hidden;
+        .dc-head h2, .dc-head > span { font-size: 15px; font-weight: 700; }
+        .btn-dc-import, .btn-dc-edit {
+            font-size: 11px; font-weight: 700; padding: 4px 10px;
+            border-radius: 6px; background: rgba(255,255,255,0.2); color: white;
+            border: 1px solid rgba(255,255,255,0.3); cursor: pointer;
+            font-family: inherit; white-space: nowrap; transition: background 0.15s;
         }
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #6ee7b7, #10b981);
-            border-radius: 4px;
-            transition: width 0.4s ease;
-        }
+        .btn-dc-import:hover, .btn-dc-edit:hover { background: rgba(255,255,255,0.32); }
+        .btn-dc-import.loading { opacity: 0.6; pointer-events: none; }
 
-        /* ── CAGR Row ── */
-        .cagr-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 10px;
-            padding: 10px 12px;
-            background: rgba(255,255,255,0.13);
-            border-radius: 10px;
+        .dc-body { padding: 14px 16px 18px; }
+        .dc-meta {
+            font-size: 11px; color: var(--text-muted); margin-bottom: 10px;
         }
-        .cagr-row.hidden { display: none; }
-        .cagr-label { font-size: 11px; opacity: 0.72; }
-        .cagr-value { font-size: 16px; font-weight: 700; }
-        .cagr-value.gain { color: #6ee7b7; }
-        .cagr-value.loss { color: #fca5a5; }
+        .dc-meta strong { color: var(--text); font-weight: 700; }
+        .dc-summary {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 8px; margin-bottom: 14px;
+        }
+        .dc-stat {
+            background: var(--bg); border-radius: 8px; padding: 9px 11px;
+        }
+        .dc-stat .ds-label {
+            font-size: 10px; color: var(--text-muted); margin-bottom: 3px;
+            font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .dc-stat .ds-value { font-size: 15px; font-weight: 700; }
+        .dc-stat .ds-value.gain { color: var(--gain); }
+        .dc-stat .ds-value.loss { color: var(--loss); }
 
-        /* ── Settings Section ── */
-        .settings-section {
-            background: var(--card);
-            border-radius: var(--r);
-            margin-bottom: 16px;
-            overflow: hidden;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        .dc-tbl { width: 100%; border-collapse: collapse; }
+        .dc-tbl th {
+            font-size: 10px; font-weight: 700; color: var(--text-muted);
+            padding: 7px 10px; border-bottom: 2px solid var(--border);
+            text-align: right; background: #fafafa; white-space: nowrap;
         }
-        .settings-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 14px;
-            background: #f8fafc;
+        .dc-tbl th:nth-child(1), .dc-tbl th:nth-child(2) { text-align: left; }
+        .dc-tbl td {
+            padding: 9px 10px; border-bottom: 1px solid var(--border);
+            font-size: 12px; text-align: right; vertical-align: middle;
+        }
+        .dc-tbl tr:last-child td { border-bottom: none; }
+        .dc-tbl td:nth-child(1) { font-family: ui-monospace, Menlo, monospace; color: var(--text-muted); }
+        .dc-tbl td:nth-child(2) { text-align: left; font-weight: 600; }
+
+        .dc-empty {
+            padding: 24px 16px; text-align: center; color: var(--text-muted);
+            font-size: 13px; background: var(--bg); border-radius: 8px;
+        }
+        .dc-empty.hidden { display: none; }
+
+        /* ── 株式 セクション ── */
+        .stock-section {
+            background: var(--card); border-radius: var(--r);
+            box-shadow: var(--shadow); overflow: hidden;
+        }
+        .stock-head {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--stock); color: white; padding: 12px 16px;
+        }
+        .stock-head > span { font-size: 15px; font-weight: 700; }
+        .stock-body { padding: 14px 16px 18px; }
+        .stock-meta { font-size: 12px; color: var(--text-muted); }
+        .stock-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .stock-tbl th {
+            text-align: right; padding: 8px 6px; font-weight: 700;
+            font-size: 11px; color: var(--text-muted);
+            border-bottom: 2px solid var(--border); white-space: nowrap;
+        }
+        .stock-tbl th:nth-child(1), .stock-tbl th:nth-child(2), .stock-tbl th:nth-child(3) { text-align: left; }
+        .stock-tbl th:last-child { text-align: center; }
+        .stock-tbl td {
+            text-align: right; padding: 9px 6px;
             border-bottom: 1px solid var(--border);
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--text);
+            color: var(--text); white-space: nowrap; font-variant-numeric: tabular-nums;
         }
-        .settings-body { padding: 14px; }
-        .settings-field { margin-bottom: 12px; }
-        .settings-field label {
-            display: block;
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        .stock-tbl tr:last-child td { border-bottom: none; }
+        .stock-tbl tbody tr:hover td { background: #fafbff; }
+        .stock-tbl td:nth-child(1) { font-family: ui-monospace, Menlo, monospace; color: var(--text-muted); text-align: left; }
+        .stock-tbl td:nth-child(2) { text-align: left; font-weight: 600; }
+        .stock-tbl td:nth-child(3) { text-align: left; }
+        .stock-tbl td:last-child   { text-align: center; }
+        .stock-tbl .stk-pnl.gain { color: var(--gain); font-weight: 700; }
+        .stock-tbl .stk-pnl.loss { color: var(--loss); font-weight: 700; }
+        .stock-tbl .stk-pnl.zero { color: var(--text-muted); }
+        .stock-empty {
+            padding: 24px 16px; text-align: center; color: var(--text-muted);
+            font-size: 13px; background: var(--bg); border-radius: 8px;
         }
-        .settings-field input {
-            display: block;
-            width: 100%;
-            padding: 10px 12px;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            font-size: 15px;
-            color: var(--text);
-            background: white;
-            font-family: inherit;
-            -webkit-appearance: none;
-            appearance: none;
-            transition: border-color 0.15s;
-        }
-        .settings-field input:focus { outline: none; border-color: var(--primary); }
-        .btn-settings-save {
-            width: 100%;
-            padding: 11px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            font-family: inherit;
-            margin-top: 4px;
-        }
-        .btn-settings-save:active { opacity: 0.8; }
-        .btn-report-act { background: #f5f3ff; color: #7c3aed; }
+        .stock-empty.hidden { display: none; }
 
-        /* ── Charts ── */
-        .charts-section { margin-bottom: 16px; }
-        .charts-section.hidden { display: none; }
-
-        .charts-head {
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            margin-bottom: 10px;
-            padding: 0 2px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        /* 株式 編集モーダル プレビュー */
+        .stock-edit-preview {
+            margin-top: 14px; padding: 11px 13px;
+            background: var(--bg); border-radius: 8px;
         }
-
-        .chart-card {
-            background: var(--card);
-            border-radius: var(--r);
-            padding: 14px 14px 18px;
-            margin-bottom: 12px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        .stock-edit-preview .row {
+            display: flex; justify-content: space-between;
+            font-size: 12px; margin-bottom: 4px;
         }
-        .chart-card:last-child { margin-bottom: 0; }
+        .stock-edit-preview .row:last-child { margin-bottom: 0; }
+        .stock-edit-preview .row span:first-child { color: var(--text-muted); }
+        .stock-edit-preview .row span:last-child  { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+        .stock-edit-preview .row span.gain { color: var(--gain); }
+        .stock-edit-preview .row span.loss { color: var(--loss); }
 
-        .chart-title {
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--text);
-            margin-bottom: 14px;
+        /* DC 編集モーダル：銘柄行 */
+        .dc-edit-fund-row {
+            display: grid;
+            grid-template-columns: 60px 1fr 1fr 1fr 30px;
+            gap: 6px; margin-bottom: 6px; align-items: center;
         }
-
-        .chart-pie-wrap {
-            max-width: 260px;
-            margin: 0 auto;
+        .dc-edit-fund-row input {
+            width: 100%; padding: 6px 8px;
+            border: 1.5px solid var(--border); border-radius: 6px;
+            font-size: 12px; font-family: inherit; color: var(--text);
         }
-
-        .chart-bar-wrap {
-            position: relative;
-            min-height: 120px;
+        .dc-edit-fund-row input:focus { outline: none; border-color: var(--dc); }
+        .dc-edit-fund-row .btn-del-fund {
+            background: #fef2f2; color: var(--loss); border: none;
+            border-radius: 6px; cursor: pointer; padding: 6px 0;
+            font-size: 14px; font-family: inherit;
         }
+        .dc-edit-section-label {
+            font-size: 10px; font-weight: 700; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.6px;
+            margin: 14px 0 6px;
+        }
+        .dc-edit-fund-head {
+            display: grid;
+            grid-template-columns: 60px 1fr 1fr 1fr 30px;
+            gap: 6px; margin-bottom: 4px;
+            font-size: 10px; font-weight: 700; color: var(--text-muted);
+        }
+        .btn-add-dc-fund {
+            display: block; width: 100%; padding: 7px;
+            background: #f0fdfa; color: var(--dc);
+            border: 1px dashed var(--dc); border-radius: 7px;
+            font-size: 12px; font-weight: 700; cursor: pointer;
+            font-family: inherit; margin-top: 6px; transition: background 0.15s;
+        }
+        .btn-add-dc-fund:hover { background: #ccfbf1; }
+        .dc-edit-preview {
+            margin-top: 14px; padding: 11px 13px;
+            background: var(--bg); border-radius: 8px;
+        }
+        .dc-edit-preview .row {
+            display: flex; justify-content: space-between;
+            font-size: 13px; margin-bottom: 4px;
+        }
+        .dc-edit-preview .row:last-child { margin-bottom: 0; }
+        .dc-edit-preview .row span:last-child { font-weight: 700; }
+        .dc-edit-preview .row .gain { color: var(--gain); }
+        .dc-edit-preview .row .loss { color: var(--loss); }
     </style>
 </head>
 <body>
 
 <!-- ── Header ── -->
 <div class="header">
-    <h1>📈 投資管理</h1>
-    <span class="header-date" id="headerDate"></span>
+    <div class="header-left">
+        <h1>📈 投資管理</h1>
+        <span class="header-date" id="headerDate"></span>
+    </div>
+    <button class="btn-add-fund" id="fabAdd">＋ 銘柄を追加</button>
 </div>
 
-<!-- ── Main ── -->
+<!-- ── Main 3-column Grid ── -->
 <main>
 
-    <!-- Portfolio Summary -->
-    <div class="portfolio-card">
-        <div class="section-label">総評価額</div>
-        <div class="total-value" id="summaryTotalValue">¥0</div>
-        <div class="stats-grid">
-            <div class="stat-item">
-                <div class="stat-label">総取得額</div>
-                <div class="stat-value" id="summaryTotalCost">¥0</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">トータル損益</div>
-                <div class="stat-value" id="summaryTotalPnL">¥0</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">トータルリターン</div>
-                <div class="stat-value" id="summaryTotalReturn">0.00%</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">保有銘柄数</div>
-                <div class="stat-value" id="summaryCount">0本</div>
-            </div>
-        </div>
-        <!-- CAGR -->
-        <div class="cagr-row hidden" id="cagrRow">
-            <span class="cagr-label">年間リターン率（CAGR）</span>
-            <span class="cagr-value" id="cagrValue">年率 -- %</span>
-        </div>
-        <!-- Goal progress -->
-        <div class="goal-progress-wrap hidden" id="goalProgressWrap">
-            <div class="goal-progress-label">
-                <span>目標: <span id="goalAmountLabel"></span></span>
-                <span id="goalPctLabel"></span>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="goalProgressFill" style="width:0%"></div>
-            </div>
-        </div>
-    </div>
+    <!-- Left Column -->
+    <div class="col-left">
 
-    <!-- Action Bar -->
-    <div class="action-bar">
-        <button class="btn-action btn-save-act" id="btnSaveData">
-            <span class="btn-icon-lg">💾</span>保存
-        </button>
-        <button class="btn-action btn-csv-act" id="btnExportCSV">
-            <span class="btn-icon-lg">📥</span>CSV出力
-        </button>
-        <button class="btn-action btn-reset-act" id="btnReset">
-            <span class="btn-icon-lg">🗑️</span>リセット
-        </button>
-        <button class="btn-action btn-report-act" id="btnMonthlyReport">
-            <span class="btn-icon-lg">📄</span>月次レポート
-        </button>
-    </div>
-
-    <!-- Settings -->
-    <div class="settings-section">
-        <div class="settings-head sec-toggle-head" data-target="settingsSectionBody">
-            <span>⚙️ 設定</span>
-            <span class="chevron" id="settingsSectionBodyChevron">▼</span>
-        </div>
-        <div id="settingsSectionBody" class="sec-body collapsed">
-            <div class="settings-body">
-                <div class="settings-field">
-                    <label>目標金額（円）</label>
-                    <input type="number" id="inpGoal" placeholder="例: 10000000" min="0" step="1">
+        <!-- Portfolio Summary -->
+        <div class="portfolio-card">
+            <div class="section-label">総評価額</div>
+            <div class="total-value" id="summaryTotalValue">¥0</div>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">総取得額</div>
+                    <div class="stat-value" id="summaryTotalCost">¥0</div>
                 </div>
-                <div class="settings-field">
-                    <label>投資開始日</label>
-                    <input type="date" id="inpStartDate">
+                <div class="stat-item">
+                    <div class="stat-label">トータル損益</div>
+                    <div class="stat-value" id="summaryTotalPnL">¥0</div>
                 </div>
-                <div class="settings-field">
-                    <label>開始時元本（円）</label>
-                    <input type="number" id="inpPrincipal" placeholder="例: 5000000" min="0" step="1">
+                <div class="stat-item">
+                    <div class="stat-label">トータルリターン</div>
+                    <div class="stat-value" id="summaryTotalReturn">0.00%</div>
                 </div>
-                <button class="btn-settings-save" id="btnSettingsSave">設定を保存</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Price Update Table -->
-    <div class="price-section hidden" id="priceSection">
-        <div class="price-sec-head sec-toggle-head" data-target="priceSectionBody">
-            <span class="price-sec-title">💹 現在価格を更新</span>
-            <div class="sec-right">
-                <button class="btn-auto-fetch" id="btnAutoFetch" title="prices.jsonから価格を再読込">🤖 自動取得</button>
-                <span class="last-updated" id="lastUpdated">未更新</span>
-                <span class="chevron" id="priceSectionBodyChevron">▲</span>
-            </div>
-        </div>
-        <div id="priceSectionBody" class="sec-body">
-            <div class="price-tbl-wrap">
-                <table class="price-tbl">
-                    <thead>
-                        <tr>
-                            <th>銘柄</th>
-                            <th>現在価格（円/万口）</th>
-                            <th>損益</th>
-                        </tr>
-                    </thead>
-                    <tbody id="priceTableBody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Charts -->
-    <section class="charts-section hidden" id="chartsSection">
-        <div class="charts-head sec-toggle-head" data-target="chartsSectionBody">
-            <span>グラフ</span>
-            <span class="chevron" id="chartsSectionBodyChevron">▼</span>
-        </div>
-        <div id="chartsSectionBody" class="sec-body collapsed">
-            <div class="chart-card">
-                <div class="chart-title">銘柄別 保有割合</div>
-                <div class="chart-pie-wrap">
-                    <canvas id="chartFundPie"></canvas>
+                <div class="stat-item">
+                    <div class="stat-label">保有銘柄数</div>
+                    <div class="stat-value" id="summaryCount">0本</div>
                 </div>
             </div>
-            <div class="chart-card">
-                <div class="chart-title">口座別 資産比率（NISA・特定）</div>
-                <div class="chart-pie-wrap">
-                    <canvas id="chartAccountPie"></canvas>
+            <div class="cagr-row hidden" id="cagrRow">
+                <span class="cagr-label">年間リターン率（CAGR）</span>
+                <span class="cagr-value" id="cagrValue">年率 -- %</span>
+            </div>
+            <div class="goal-progress-wrap hidden" id="goalProgressWrap">
+                <div class="goal-progress-label">
+                    <span>目標: <span id="goalAmountLabel"></span></span>
+                    <span id="goalPctLabel"></span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="goalProgressFill" style="width:0%"></div>
                 </div>
             </div>
-            <div class="chart-card">
-                <div class="chart-title">銘柄別 損益</div>
-                <div class="chart-bar-wrap" id="chartBarWrap">
-                    <canvas id="chartPnLBar"></canvas>
+            <!-- 特定口座 税引き後 -->
+            <div class="after-tax-section hidden" id="afterTaxSection">
+                <div class="after-tax-title">特定口座 売却時（税引き後）</div>
+                <div class="after-tax-row">
+                    <span class="after-tax-label">税引き後評価額</span>
+                    <span class="after-tax-val" id="afterTaxValue">―</span>
+                </div>
+                <div class="after-tax-row">
+                    <span class="after-tax-label">税引き後損益</span>
+                    <span class="after-tax-val" id="afterTaxPnl">―</span>
+                </div>
+                <div class="after-tax-row">
+                    <span class="after-tax-label muted" style="opacity:0.6;font-size:11px">課税額 (20.315%)</span>
+                    <span class="after-tax-val muted" id="afterTaxAmount">―</span>
                 </div>
             </div>
-        </div>
-    </section>
-
-    <!-- NISA口座 -->
-    <div class="account-block">
-        <div class="account-head nisa sec-toggle-head" data-target="nisaBlockBody">
-            <h2>🌱 NISA口座</h2>
-            <div class="sec-right">
-                <div class="account-head-right" id="nisaHeadRight">
-                    <div class="acc-value">¥0</div>
-                    <div>損益: ¥0</div>
-                </div>
-                <span class="chevron" id="nisaBlockBodyChevron">▲</span>
-            </div>
-        </div>
-        <div id="nisaBlockBody" class="sec-body">
-            <div class="fund-list" id="nisaList"></div>
-        </div>
-    </div>
-
-    <!-- 特定口座 -->
-    <div class="account-block">
-        <div class="account-head tokutei sec-toggle-head" data-target="tokuteiBlockBody">
-            <h2>📊 特定口座</h2>
-            <div class="sec-right">
-                <div class="account-head-right" id="tokuteiHeadRight">
-                    <div class="acc-value">¥0</div>
-                    <div>損益: ¥0</div>
-                </div>
-                <span class="chevron" id="tokuteiBlockBodyChevron">▲</span>
-            </div>
-        </div>
-        <div id="tokuteiBlockBody" class="sec-body">
-            <div class="fund-list" id="tokuteiList"></div>
-        </div>
-    </div>
-
-    <!-- History / Time-Series Section -->
-    <section class="history-section" id="historySection">
-        <div class="history-head sec-toggle-head" data-target="historySectionBody">
-            <span class="history-head-label">📅 資産推移</span>
-            <div class="sec-right">
-                <button class="btn-record" id="btnRecord">今日のデータを記録</button>
-                <span class="chevron" id="historySectionBodyChevron">▼</span>
-            </div>
-        </div>
-        <div id="historySectionBody" class="sec-body collapsed">
-
-            <!-- Line charts (shown after ≥2 records) -->
-            <div id="histCharts" class="hidden">
-                <div class="chart-card">
-                    <div class="chart-title">総資産の推移</div>
-                    <div class="chart-line-wrap">
-                        <canvas id="chartValueLine"></canvas>
+            <!-- NISA 枠サマリー -->
+            <div class="nisa-dash-quota hidden" id="nisaDashQuota">
+                <div class="nisa-dash-title">🌿 NISA 生涯非課税枠</div>
+                <div class="ndq-row">
+                    <div class="ndq-head">
+                        <span class="ndq-label">積立投資枠 <span class="ndq-limit">/ ¥6,000,000</span></span>
+                        <span class="ndq-right"><span id="ndqTsPct">0.0%</span></span>
+                    </div>
+                    <div class="ndq-bar"><div class="ndq-fill ndq-ts" id="ndqTsFill" style="width:0%"></div></div>
+                    <div class="ndq-sub">
+                        <span id="ndqTsUsed">¥0 使用</span>
+                        <span id="ndqTsRemain">残 ¥6,000,000</span>
                     </div>
                 </div>
-                <div class="chart-card">
-                    <div class="chart-title">損益の推移</div>
-                    <div class="chart-line-wrap">
-                        <canvas id="chartPnLLine"></canvas>
+                <div class="ndq-row">
+                    <div class="ndq-head">
+                        <span class="ndq-label">成長投資枠 <span class="ndq-limit">/ ¥12,000,000</span></span>
+                        <span class="ndq-right"><span id="ndqScPct">0.0%</span></span>
+                    </div>
+                    <div class="ndq-bar"><div class="ndq-fill ndq-sc" id="ndqScFill" style="width:0%"></div></div>
+                    <div class="ndq-sub">
+                        <span id="ndqScUsed">¥0 使用</span>
+                        <span id="ndqScRemain">残 ¥12,000,000</span>
+                    </div>
+                </div>
+                <div class="ndq-row ndq-total-row">
+                    <div class="ndq-head">
+                        <span class="ndq-label">合　計 <span class="ndq-limit">/ ¥18,000,000</span></span>
+                        <span class="ndq-right"><span id="ndqTotalPct">0.0%</span></span>
+                    </div>
+                    <div class="ndq-bar"><div class="ndq-fill ndq-total" id="ndqTotalFill" style="width:0%"></div></div>
+                    <div class="ndq-sub">
+                        <span id="ndqTotalUsed">¥0 使用</span>
+                        <span id="ndqTotalRemain">残 ¥18,000,000</span>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- History table -->
-            <div class="chart-card">
-                <div class="chart-title-row">
-                    <div class="chart-title">記録一覧</div>
-                    <button class="btn-csv-hist" id="btnExportHistCSV">📥 CSV出力</button>
+        <!-- Action Bar -->
+        <div class="action-bar">
+            <button class="btn-action btn-save-act" id="btnSaveData">
+                <span class="btn-icon-lg">💾</span>保存
+            </button>
+            <button class="btn-action btn-csv-act" id="btnExportCSV">
+                <span class="btn-icon-lg">📥</span>CSV出力
+            </button>
+            <button class="btn-action btn-report-act" id="btnMonthlyReport">
+                <span class="btn-icon-lg">📄</span>月次レポート
+            </button>
+            <button class="btn-action btn-backup-act" id="btnBackup">
+                <span class="btn-icon-lg">📤</span>バックアップ出力
+            </button>
+            <button class="btn-action btn-restore-act" id="btnRestore">
+                <span class="btn-icon-lg">📂</span>バックアップから復元
+            </button>
+        </div>
+        <input type="file" id="restoreFileInput" accept=".json" style="display:none">
+
+        <!-- Settings -->
+        <div class="settings-section">
+            <div class="settings-head sec-toggle-head" data-target="settingsSectionBody">
+                <span>⚙️ 設定</span>
+                <span class="chevron" id="settingsSectionBodyChevron">▼</span>
+            </div>
+            <div id="settingsSectionBody" class="sec-body collapsed">
+                <div class="settings-body">
+                    <div class="settings-field">
+                        <label>目標金額（円）</label>
+                        <input type="number" id="inpGoal" placeholder="例: 10000000" min="0" step="1">
+                    </div>
+                    <div class="settings-field">
+                        <label>投資開始日</label>
+                        <input type="date" id="inpStartDate">
+                    </div>
+                    <div class="settings-field">
+                        <label>開始時元本（円）</label>
+                        <input type="number" id="inpPrincipal" placeholder="例: 5000000" min="0" step="1">
+                    </div>
+                    <button class="btn-settings-save" id="btnSettingsSave">設定を保存</button>
+                    <button class="btn-reset-danger" id="btnReset">🗑️ データを全てリセット</button>
                 </div>
-                <div class="hist-tbl-wrap">
-                    <table class="hist-tbl">
+            </div>
+        </div>
+
+    </div><!-- /.col-left -->
+
+    <!-- Middle Column: 資産推移 -->
+    <div class="col-mid">
+
+        <!-- History / Time-Series Section -->
+        <section class="history-section" id="historySection">
+            <div class="history-head sec-toggle-head" data-target="historySectionBody">
+                <span class="history-head-label">📅 資産推移</span>
+                <div class="sec-right">
+                    <button class="btn-record" id="btnRecord">今日のデータを記録</button>
+                    <span class="chevron" id="historySectionBodyChevron">▼</span>
+                </div>
+            </div>
+            <div id="historySectionBody" class="sec-body collapsed">
+                <div class="history-body">
+
+                    <!-- 期間タブ -->
+                    <div class="hist-period-tabs">
+                        <button class="hist-tab" data-period="1m">1ヶ月</button>
+                        <button class="hist-tab" data-period="3m">3ヶ月</button>
+                        <button class="hist-tab" data-period="6m">6ヶ月</button>
+                        <button class="hist-tab active" data-period="1y">1年</button>
+                        <button class="hist-tab" data-period="3y">3年</button>
+                        <button class="hist-tab" data-period="5y">5年</button>
+                        <button class="hist-tab" data-period="all">全期間</button>
+                    </div>
+
+                    <!-- Line chart (shown after ≥2 records) -->
+                    <div id="histCharts" class="hidden">
+                        <div class="chart-card">
+                            <div class="hist-chart-header">
+                                <div class="chart-title">総資産・損益の推移</div>
+                                <div class="hist-filter-tabs">
+                                    <button class="hist-ftab active" data-filter="all">すべて</button>
+                                    <button class="hist-ftab" data-filter="funds">投資信託</button>
+                                    <button class="hist-ftab" data-filter="dc">確定拠出年金</button>
+                                </div>
+                            </div>
+                            <div class="chart-line-wrap" style="height:260px">
+                                <canvas id="chartValueLine"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- History table (折りたたみ可) -->
+                    <div class="chart-card">
+                        <div class="chart-title-row sec-toggle-head" data-target="histTableBodyWrap">
+                            <div class="chart-title">記録一覧</div>
+                            <div class="sec-right">
+                                <button class="btn-csv-hist" id="btnExportHistCSV" onclick="event.stopPropagation()">📥 CSV出力</button>
+                                <span class="chevron" id="histTableBodyWrapChevron">▲</span>
+                            </div>
+                        </div>
+                        <div id="histTableBodyWrap" class="sec-body">
+                            <div class="hist-tbl-wrap">
+                                <table class="hist-tbl">
+                                    <thead>
+                                        <tr>
+                                            <th>日付</th>
+                                            <th>総評価額</th>
+                                            <th>損益額</th>
+                                            <th>損益率</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="histTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- /.history-body -->
+            </div>
+        </section>
+
+    </div><!-- /.col-mid -->
+
+    <!-- Right Column: グラフ -->
+    <div class="col-right">
+
+        <!-- Charts -->
+        <section class="charts-section hidden" id="chartsSection">
+            <div class="charts-head sec-toggle-head" data-target="chartsSectionBody">
+                <span>グラフ</span>
+                <span class="chevron" id="chartsSectionBodyChevron">▲</span>
+            </div>
+            <div id="chartsSectionBody" class="sec-body collapsed">
+                <div class="chart-card">
+                    <div class="chart-title">銘柄別 保有割合</div>
+                    <div class="chart-pie-wrap">
+                        <canvas id="chartFundPie"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">口座別 資産比率（NISA・特定）</div>
+                    <div class="chart-pie-wrap">
+                        <canvas id="chartAccountPie"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">銘柄別 損益</div>
+                    <div class="chart-bar-wrap" id="chartBarWrap">
+                        <canvas id="chartPnLBar"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div><!-- /.col-right -->
+
+    <!-- Bottom Full Width: 価格更新 + 個別銘柄 -->
+    <div class="col-full">
+
+        <!-- Price Update Table -->
+        <div class="price-section hidden" id="priceSection">
+            <div class="price-sec-head sec-toggle-head" data-target="priceSectionBody">
+                <span class="price-sec-title">💹 現在価格を更新</span>
+                <div class="sec-right">
+                    <button class="btn-auto-fetch" id="btnAutoFetch" title="prices.jsonから価格を再読込">🤖 自動取得</button>
+                    <span class="last-updated" id="lastUpdated">未更新</span>
+                    <span class="chevron" id="priceSectionBodyChevron">▲</span>
+                </div>
+            </div>
+            <div id="priceSectionBody" class="sec-body">
+                <div class="price-tbl-wrap">
+                    <table class="price-tbl">
                         <thead>
                             <tr>
-                                <th>日付</th>
-                                <th>総評価額</th>
-                                <th>損益額</th>
-                                <th>損益率</th>
-                                <th></th>
+                                <th>銘柄</th>
+                                <th>現在価格（円/万口）</th>
+                                <th>損益</th>
                             </tr>
                         </thead>
-                        <tbody id="histTableBody"></tbody>
+                        <tbody id="priceTableBody"></tbody>
                     </table>
                 </div>
             </div>
-
         </div>
-    </section>
+
+        <!-- 口座別銘柄リスト (2×2グリッド) -->
+        <div class="accounts-grid">
+
+            <!-- 旧NISA口座 -->
+            <div class="account-block">
+                <div class="account-head nisa-old sec-toggle-head" data-target="nisaOldBlockBody">
+                    <h2>📘 旧NISA口座</h2>
+                    <div class="sec-right">
+                        <div class="account-head-right" id="nisaOldHeadRight">
+                            <div class="acc-value">¥0</div>
+                            <div>損益: ¥0</div>
+                        </div>
+                        <span class="chevron" id="nisaOldBlockBodyChevron">▲</span>
+                    </div>
+                </div>
+                <div id="nisaOldBlockBody" class="sec-body">
+                    <div class="fund-list" id="nisaOldList"></div>
+                </div>
+            </div>
+
+            <!-- 新NISA 積立投資枠 -->
+            <div class="account-block">
+                <div class="account-head nisa-tsumitate sec-toggle-head" data-target="nisaTsumitateBlockBody">
+                    <h2>🌱 新NISA 積立投資枠</h2>
+                    <div class="sec-right">
+                        <div class="account-head-right" id="nisaTsumitateHeadRight">
+                            <div class="acc-value">¥0</div>
+                            <div>損益: ¥0</div>
+                        </div>
+                        <span class="chevron" id="nisaTsumitateBlockBodyChevron">▲</span>
+                    </div>
+                </div>
+                <div id="nisaTsumitateBlockBody" class="sec-body">
+                    <div class="nisa-quota" id="nisaTsumitateQuota"></div>
+                    <div class="fund-list" id="nisaTsumitateList"></div>
+                </div>
+            </div>
+
+            <!-- 新NISA 成長投資枠 -->
+            <div class="account-block">
+                <div class="account-head nisa-seichou sec-toggle-head" data-target="nisaSeichouBlockBody">
+                    <h2>🚀 新NISA 成長投資枠</h2>
+                    <div class="sec-right">
+                        <div class="account-head-right" id="nisaSeichouHeadRight">
+                            <div class="acc-value">¥0</div>
+                            <div>損益: ¥0</div>
+                        </div>
+                        <span class="chevron" id="nisaSeichouBlockBodyChevron">▲</span>
+                    </div>
+                </div>
+                <div id="nisaSeichouBlockBody" class="sec-body">
+                    <div class="nisa-quota" id="nisaSeichouQuota"></div>
+                    <div class="fund-list" id="nisaSeichouList"></div>
+                </div>
+            </div>
+
+            <!-- 特定口座 -->
+            <div class="account-block">
+                <div class="account-head tokutei sec-toggle-head" data-target="tokuteiBlockBody">
+                    <h2>📊 特定口座</h2>
+                    <div class="sec-right">
+                        <div class="account-head-right" id="tokuteiHeadRight">
+                            <div class="acc-value">¥0</div>
+                            <div>損益: ¥0</div>
+                        </div>
+                        <span class="chevron" id="tokuteiBlockBodyChevron">▲</span>
+                    </div>
+                </div>
+                <div id="tokuteiBlockBody" class="sec-body">
+                    <div class="tokutei-aftertax hidden" id="tokuteiAfterTax">
+                        <div class="ta-title">💰 売却時（税引き後）</div>
+                        <div class="ta-grid">
+                            <div class="ta-cell">
+                                <div class="ta-label">税引き後評価額</div>
+                                <div class="ta-value" id="tokAtValue">―</div>
+                            </div>
+                            <div class="ta-cell">
+                                <div class="ta-label">税引き後損益</div>
+                                <div class="ta-value" id="tokAtPnl">―</div>
+                            </div>
+                            <div class="ta-cell">
+                                <div class="ta-label">課税額 (20.315%)</div>
+                                <div class="ta-value muted" id="tokAtTax">―</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="fund-list" id="tokuteiList"></div>
+                </div>
+            </div>
+
+        </div><!-- /.accounts-grid -->
+
+        <!-- ── 確定拠出年金（企業型DC） ── -->
+        <section class="dc-section" id="dcSection">
+            <div class="dc-head sec-toggle-head" data-target="dcSectionBody">
+                <span>🏦 確定拠出年金（企業型DC）</span>
+                <div class="sec-right">
+                    <div class="account-head-right" id="dcHeadRight" style="display:none">
+                        <div class="acc-value" id="dcHeadValue">¥0</div>
+                        <div id="dcHeadPnl">損益: ¥0</div>
+                    </div>
+                    <span class="chevron" id="dcSectionBodyChevron">▲</span>
+                </div>
+            </div>
+            <div id="dcSectionBody" class="sec-body">
+                <div class="dc-body">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                        <div class="dc-meta" id="dcMeta">―</div>
+                        <button class="btn-sm btn-edit-sm" id="btnDcEdit" onclick="openDcEdit()">編集</button>
+                    </div>
+                    <div class="dc-summary">
+                        <div class="dc-stat"><div class="ds-label">年金資産評価額</div><div class="ds-value" id="dcTotalValue">¥0</div></div>
+                        <div class="dc-stat"><div class="ds-label">拠出金累計</div><div class="ds-value" id="dcContrib">¥0</div></div>
+                        <div class="dc-stat"><div class="ds-label">評価損益</div><div class="ds-value" id="dcPnl">¥0</div></div>
+                        <div class="dc-stat"><div class="ds-label">前回基準日比</div><div class="ds-value" id="dcDelta">―</div></div>
+                    </div>
+                    <table class="dc-tbl" id="dcTbl">
+                        <thead><tr><th>コード</th><th>銘柄</th><th>口数</th><th>基準価格</th><th>評価額</th><th>割合</th></tr></thead>
+                        <tbody id="dcHoldingsBody"></tbody>
+                    </table>
+                    <div id="dcEmpty" class="dc-empty hidden">
+                        まだデータがありません<br>
+                        <small>「✏️ 編集」から銘柄を登録してください</small>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── 株式 ── -->
+        <section class="stock-section" id="stockSection">
+            <div class="stock-head sec-toggle-head" data-target="stockSectionBody">
+                <span>📈 株式</span>
+                <div class="sec-right">
+                    <div class="account-head-right" id="stockHeadRight" style="display:none">
+                        <div class="acc-value" id="stockHeadValue">¥0</div>
+                        <div id="stockHeadPnl">損益: ¥0 (0.00%)</div>
+                    </div>
+                    <span class="chevron" id="stockSectionBodyChevron">▲</span>
+                </div>
+            </div>
+            <div id="stockSectionBody" class="sec-body">
+                <div class="stock-body">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                        <div class="stock-meta" id="stockMeta">―</div>
+                        <button class="btn-sm btn-edit-sm" id="btnAddStock" onclick="openStockEdit()">+ 銘柄追加</button>
+                    </div>
+                    <table class="stock-tbl" id="stockTbl">
+                        <thead>
+                            <tr>
+                                <th>コード</th>
+                                <th>銘柄</th>
+                                <th>口座</th>
+                                <th>株数</th>
+                                <th>取得単価</th>
+                                <th>現在価格</th>
+                                <th>評価額</th>
+                                <th>損益</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="stockTblBody"></tbody>
+                    </table>
+                    <div id="stockEmpty" class="stock-empty hidden">
+                        まだ銘柄がありません<br>
+                        <small>「+ 銘柄追加」から株式を登録してください</small>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div><!-- /.col-full -->
 
 </main>
 
 <!-- ── Toast ── -->
 <div class="toast" id="toast"></div>
 
-<!-- ── FAB ── -->
-<button class="fab" id="fabAdd" title="銘柄を追加">+</button>
-
-<!-- ── Bottom Sheet Modal ── -->
+<!-- ── Modal (Centered Dialog) ── -->
 <div class="overlay hidden" id="overlay">
     <div class="sheet">
         <div class="sheet-handle"></div>
@@ -1063,7 +1329,9 @@
             <label>口座種別</label>
             <div class="select-wrap">
                 <select id="inpAccount">
-                    <option value="NISA">NISA口座</option>
+                    <option value="旧NISA">旧NISA口座（旧制度）</option>
+                    <option value="新NISA積立">新NISA 積立投資枠</option>
+                    <option value="新NISA成長">新NISA 成長投資枠</option>
                     <option value="特定">特定口座</option>
                 </select>
             </div>
@@ -1109,6 +1377,68 @@
     </div>
 </div>
 
+<!-- ── 銘柄内訳ポップアップ ── -->
+<div class="overlay hidden" id="histDetailOverlay">
+    <div class="sheet">
+        <h2 id="histDetailTitle"></h2>
+        <div id="histDetailContent"></div>
+        <button class="btn-cancel" id="histDetailClose">閉じる</button>
+    </div>
+</div>
+
+<!-- ── 確定拠出年金 編集モーダル ── -->
+<!-- 株式 編集モーダル -->
+<div class="overlay hidden" id="stockEditOverlay">
+    <div class="sheet">
+        <h2 id="stockEditTitle">📈 株式 を追加</h2>
+        <div class="field"><label>銘柄コード（例: 5243.T）</label><input type="text" id="stkInpCode" placeholder="5243.T"></div>
+        <div class="field"><label>銘柄名</label><input type="text" id="stkInpName" placeholder="銘柄名"></div>
+        <div class="field"><label>口座</label>
+            <select id="stkInpAccount">
+                <option value="持株会">持株会</option>
+                <option value="新NISA成長">新NISA 成長投資枠</option>
+                <option value="特定">特定口座</option>
+                <option value="旧NISA">旧NISA</option>
+            </select>
+        </div>
+        <div class="field"><label>保有株数</label><input type="number" id="stkInpShares" min="0" step="1" placeholder="100"></div>
+        <div class="field"><label>平均取得単価（円/株）</label><input type="number" id="stkInpAcq" min="0" step="0.1" placeholder="500"></div>
+        <div class="field"><label>現在価格（円/株、自動更新対象）</label><input type="number" id="stkInpCur" min="0" step="0.1" placeholder="525"></div>
+        <div class="stock-edit-preview" id="stockEditPreview">
+            <div class="row"><span>取得金額</span><span id="stkPvCost">¥0</span></div>
+            <div class="row"><span>評価額</span><span id="stkPvValue">¥0</span></div>
+            <div class="row"><span>損益</span><span id="stkPvPnl">―</span></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+            <button class="btn-save" id="btnStockSave" style="flex:1">💾 保存</button>
+            <button class="btn-cancel" id="btnStockCancel" style="flex:1;margin:0">キャンセル</button>
+        </div>
+        <button class="btn-del-sm hidden" id="btnStockDelete" style="margin-top:8px;width:100%;padding:8px;border-radius:7px;border:none;cursor:pointer;font-family:inherit;font-weight:700">この銘柄を削除</button>
+    </div>
+</div>
+
+<div class="overlay hidden" id="dcEditOverlay">
+    <div class="sheet">
+        <h2 id="dcEditTitle">🏦 確定拠出年金 を編集</h2>
+        <div class="field"><label>基準日</label><input type="date" id="dcInpAsOf"></div>
+        <div class="field"><label>拠出金累計（円）</label><input type="number" id="dcInpContrib" min="0" step="1"></div>
+        <div class="dc-edit-section-label">商品別保有内訳</div>
+        <div class="dc-edit-fund-head">
+            <div>コード</div><div>銘柄名</div><div>口数</div><div>基準価格</div><div></div>
+        </div>
+        <div id="dcEditFundsList"></div>
+        <button class="btn-add-dc-fund" id="btnAddDcFund">＋ 銘柄を追加</button>
+        <div class="dc-edit-preview" id="dcEditPreview">
+            <div class="row"><span>合計評価額</span><span id="dcPvTotal">¥0</span></div>
+            <div class="row"><span>評価損益（自動計算）</span><span id="dcPvPnl">―</span></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+            <button class="btn-save" id="btnDcSave" style="flex:1">💾 保存</button>
+            <button class="btn-cancel" id="btnDcCancel" style="flex:1;margin:0">キャンセル</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2/encoding.min.js"></script>
 <script>
@@ -1116,20 +1446,36 @@
 
 const STORAGE_KEY  = 'tokushi_portfolio_v1';
 const SETTINGS_KEY = 'tokushi_settings_v1';
+const DC_KEY       = 'tokushi_dc_v1';
+const DC_HIST_KEY  = 'tokushi_dc_history_v1';
+const STOCK_KEY    = 'tokushi_stocks_v1';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let funds    = [];
-let history     = [];   // 手動スナップショット（localStorage）
-let autoHistory = [];   // price_history.json から自動生成
-
-function combinedHistory() {
-    const manualDates = new Set(history.map(h => h.date));
-    const filtered = autoHistory.filter(h => !manualDates.has(h.date));
-    return [...history, ...filtered].sort((a, b) => a.date.localeCompare(b.date));
-}
+let history  = [];          // 手動スナップショット（localStorage）
+let autoHistory   = [];     // price_history.json から自動生成
+let priceHistData = {};     // price_history.json の生データ（編集時に参照）
 let settings = { goalAmount: 0, startDate: '', principal: 0 };
 let editId   = null;
 let _fundGroups = [];  // grouped by name, cached for price input handler
+
+// ── 確定拠出年金（DC） ─────────────────────────────────────────────────────
+let dcPension = {
+    asOfDate: '',
+    totalValue: 0, contributions: 0, pnl: 0,
+    holdings: []   // [{ code, name, qty, unitPrice, value, ratio }]
+};
+let dcHistory = []; // [{ asOfDate, totalValue, contributions, pnl, holdings }]
+
+let stocks = []; // [{ id, code, name, account, shares, acqPrice, curPrice }]
+//   account: '持株会' | '新NISA成長' | '特定' | '旧NISA'
+
+// 新NISA 生涯非課税限度額（取得価額ベース）
+const NISA_LIMITS = {
+    '新NISA積立': 6000000,    // 600万円
+    '新NISA成長': 12000000    // 1,200万円
+};
+const NISA_TOTAL_LIMIT = 18000000; // 合算 1,800万円
 
 // ── Chart Instances ────────────────────────────────────────────────────────
 const PALETTE = [
@@ -1138,7 +1484,9 @@ const PALETTE = [
 ];
 const CHART_FONT = "-apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif";
 let chartFundPie = null, chartAccountPie = null, chartPnLBar = null;
-let chartValueLine = null, chartPnLLine = null;
+let chartValueLine = null;
+let histPeriod  = '1y';  // '1m' | '3m' | '6m' | '1y' | '3y' | '5y' | 'all'
+let histFilter  = 'all';   // 'all' | 'funds' | 'dc'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -1148,9 +1496,29 @@ const rateStr = r => (r >= 0 ? '+' : '') + r.toFixed(2) + '%';
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
+function accountCls(account) {
+    if (account === '旧NISA')    return 'nisa-old';
+    if (account === '新NISA積立') return 'nisa-tsumitate';
+    if (account === '新NISA成長') return 'nisa-seichou';
+    if (account === '持株会')    return 'mochikabu';
+    if (account === '確定拠出年金') return 'dc';
+    return 'tokutei';
+}
+
 function calcFund(f) {
     const cost  = (f.qty * f.acq) / 10000;
     const value = (f.qty * f.cur) / 10000;
+    const pnl   = value - cost;
+    const rate  = cost > 0 ? (pnl / cost) * 100 : 0;
+    return { cost, value, pnl, rate };
+}
+
+function calcStock(s) {
+    const shares    = s.shares || 0;
+    const acqPrice  = s.acqPrice || 0;
+    const curPrice  = s.curPrice || 0;
+    const cost  = shares * acqPrice;
+    const value = shares * curPrice;
     const pnl   = value - cost;
     const rate  = cost > 0 ? (pnl / cost) * 100 : 0;
     return { cost, value, pnl, rate };
@@ -1162,7 +1530,11 @@ const HISTORY_KEY = 'tokushi_history_v1';
 function load() {
     try { funds   = JSON.parse(localStorage.getItem(STORAGE_KEY))  || []; } catch { funds   = []; }
     try { history = JSON.parse(localStorage.getItem(HISTORY_KEY))  || []; } catch { history = []; }
+    // 旧データ "NISA" → "旧NISA" へ移行
+    funds = funds.map(f => f.account === 'NISA' ? { ...f, account: '旧NISA' } : f);
     loadSettings();
+    loadDcData();
+    loadStocks();
 }
 
 function persist() {
@@ -1184,12 +1556,32 @@ function persistSettings() {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
 
+function loadDcData() {
+    try {
+        const stored = JSON.parse(localStorage.getItem(DC_KEY));
+        if (stored) dcPension = { ...dcPension, ...stored };
+    } catch { /* keep defaults */ }
+    try { dcHistory = JSON.parse(localStorage.getItem(DC_HIST_KEY)) || []; } catch { dcHistory = []; }
+}
+
+function persistDc()        { localStorage.setItem(DC_KEY,      JSON.stringify(dcPension)); }
+function persistDcHistory() { localStorage.setItem(DC_HIST_KEY, JSON.stringify(dcHistory)); }
+
+function loadStocks() {
+    try { stocks = JSON.parse(localStorage.getItem(STOCK_KEY)) || []; } catch { stocks = []; }
+}
+function persistStocks() { localStorage.setItem(STOCK_KEY, JSON.stringify(stocks)); }
+
 // ── Render ─────────────────────────────────────────────────────────────────
 function render() {
     renderSummary();
     renderPriceTable();
-    renderAccount('NISA', 'nisaList',    'nisaHeadRight');
-    renderAccount('特定', 'tokuteiList', 'tokuteiHeadRight');
+    renderAccount('旧NISA',   'nisaOldList',        'nisaOldHeadRight');
+    renderAccount('新NISA積立', 'nisaTsumitateList',  'nisaTsumitateHeadRight');
+    renderAccount('新NISA成長', 'nisaSeichouList',    'nisaSeichouHeadRight');
+    renderAccount('特定',      'tokuteiList',        'tokuteiHeadRight');
+    renderDc();
+    renderStocks();
     renderCharts();
     renderHistory();
 }
@@ -1201,6 +1593,17 @@ function renderSummary() {
         totalCost  += cost;
         totalValue += value;
     });
+    // 株式を加算
+    stocks.forEach(s => {
+        const { cost, value } = calcStock(s);
+        totalCost  += cost;
+        totalValue += value;
+    });
+    // 確定拠出年金を加算（拠出金累計を取得額として扱う）
+    if (dcPension.totalValue > 0) {
+        totalCost  += dcPension.contributions;
+        totalValue += dcPension.totalValue;
+    }
     const pnl  = totalValue - totalCost;
     const rate = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
 
@@ -1215,7 +1618,7 @@ function renderSummary() {
     retEl.textContent = rateStr(rate);
     retEl.className   = 'stat-value ' + (rate > 0 ? 'gain' : rate < 0 ? 'loss' : '');
 
-    $('summaryCount').textContent = funds.length + '本';
+    $('summaryCount').textContent = (funds.length + stocks.length) + '本';
 
     // ── CAGR ──
     const cagrRow = $('cagrRow');
@@ -1244,9 +1647,158 @@ function renderSummary() {
     } else {
         goalWrap.classList.add('hidden');
     }
+
+    // ── 特定口座 / 持株会 税引き後（20.315%課税対象） ──
+    const TAX_RATE = 0.20315;
+    let tokCost = 0, tokValue = 0;
+    funds.filter(f => f.account === '特定').forEach(f => {
+        const c = calcFund(f);
+        tokCost  += c.cost;
+        tokValue += c.value;
+    });
+    stocks.filter(s => s.account === '特定' || s.account === '持株会').forEach(s => {
+        const c = calcStock(s);
+        tokCost  += c.cost;
+        tokValue += c.value;
+    });
+    const atSec    = $('afterTaxSection');
+    const tokAtSec = $('tokuteiAfterTax');
+    if (tokValue > 0) {
+        const tokPnl     = tokValue - tokCost;
+        const taxAmount  = Math.max(0, tokPnl) * TAX_RATE;
+        const atValue    = tokValue - taxAmount;
+        const atPnl      = atValue - tokCost;
+        // ダッシュボード側
+        $('afterTaxValue').textContent = yen(atValue);
+        $('afterTaxValue').className   = 'after-tax-val' + (atPnl >= 0 ? ' gain' : '');
+        $('afterTaxPnl').textContent   = pnlStr(atPnl);
+        $('afterTaxPnl').className     = 'after-tax-val' + (atPnl >= 0 ? ' gain' : '');
+        $('afterTaxAmount').textContent = '−' + yen(taxAmount);
+        atSec.classList.remove('hidden');
+        // 特定口座ブロック側
+        const cls = atPnl > 0 ? 'gain' : atPnl < 0 ? 'loss' : '';
+        $('tokAtValue').textContent = yen(atValue);
+        $('tokAtValue').className   = 'ta-value ' + cls;
+        $('tokAtPnl').textContent   = pnlStr(atPnl);
+        $('tokAtPnl').className     = 'ta-value ' + cls;
+        $('tokAtTax').textContent   = '−' + yen(taxAmount);
+        tokAtSec.classList.remove('hidden');
+    } else {
+        atSec.classList.add('hidden');
+        tokAtSec.classList.add('hidden');
+    }
+
+    // ── NISA 枠サマリー ──
+    renderNisaDashQuota();
+}
+
+function renderNisaDashQuota() {
+    const tsUsed  = funds.filter(f => f.account === '新NISA積立').reduce((s, f) => s + calcFund(f).cost, 0);
+    const scFund  = funds.filter(f => f.account === '新NISA成長').reduce((s, f) => s + calcFund(f).cost, 0);
+    const scStock = stocks.filter(s => s.account === '新NISA成長').reduce((sum, s) => sum + calcStock(s).cost, 0);
+    const scUsed  = scFund + scStock;
+    const total   = tsUsed + scUsed;
+    const el      = $('nisaDashQuota');
+
+    if (tsUsed === 0 && scUsed === 0) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+
+    const TS_LIMIT    = NISA_LIMITS['新NISA積立'];  // 600万
+    const SC_LIMIT    = NISA_LIMITS['新NISA成長'];  // 1200万
+    const TOTAL_LIMIT = NISA_TOTAL_LIMIT;           // 1800万
+
+    function setRow(fillId, pctId, usedId, remainId, used, limit) {
+        const pct  = Math.min(100, (used / limit) * 100);
+        const rem  = limit - used;
+        $(fillId).style.width    = pct.toFixed(2) + '%';
+        $(pctId).textContent     = pct.toFixed(1) + '%';
+        $(usedId).textContent    = yen(used) + ' 使用';
+        const remEl = $(remainId);
+        if (rem < 0) {
+            remEl.textContent  = '超過 ' + yen(-rem);
+            remEl.className    = 'ndq-over';
+        } else {
+            remEl.textContent  = '残 ' + yen(rem);
+            remEl.className    = '';
+        }
+    }
+
+    setRow('ndqTsFill',    'ndqTsPct',    'ndqTsUsed',    'ndqTsRemain',    tsUsed, TS_LIMIT);
+    setRow('ndqScFill',    'ndqScPct',    'ndqScUsed',    'ndqScRemain',    scUsed, SC_LIMIT);
+    setRow('ndqTotalFill', 'ndqTotalPct', 'ndqTotalUsed', 'ndqTotalRemain', total,  TOTAL_LIMIT);
+}
+
+function renderNisaQuota(acType, containerId) {
+    const el = $(containerId);
+    if (!el) return;
+    const limit = NISA_LIMITS[acType];
+    if (!limit) { el.innerHTML = ''; return; }
+
+    // 投資信託 + 株式（同じ口座区分）を統合
+    const items = [
+        ...funds.filter(f => f.account === acType).map(f => ({ name: f.name, cost: calcFund(f).cost })),
+        ...stocks.filter(s => s.account === acType).map(s => ({ name: s.name + ' 📈', cost: calcStock(s).cost }))
+    ];
+    if (items.length === 0) {
+        el.innerHTML = `
+        <div class="quota-head">
+            <span class="quota-label">生涯非課税枠の使用状況</span>
+            <span class="quota-amount">¥0 / ${yen(limit)}</span>
+        </div>
+        <div class="quota-bar"></div>
+        <div class="quota-meta">
+            <span>銘柄: 0件</span>
+            <span class="quota-remain gain">残 ${yen(limit)}</span>
+        </div>`;
+        return;
+    }
+
+    const segments = items.map((it, i) => ({
+        name: it.name,
+        cost: it.cost,
+        segPct: Math.min(100, (it.cost / limit) * 100),
+        color: PALETTE[i % PALETTE.length]
+    })).sort((a, b) => b.cost - a.cost);
+
+    const used      = segments.reduce((s, x) => s + x.cost, 0);
+    const remaining = Math.max(0, limit - used);
+    const usedPct   = Math.min(100, (used / limit) * 100);
+    const overLimit = used > limit;
+
+    const segHtml = segments.map(s =>
+        `<div class="quota-seg" style="width:${s.segPct.toFixed(2)}%;background:${s.color}" title="${esc(s.name)}: ${yen(s.cost)} (${((s.cost/limit)*100).toFixed(1)}%)"></div>`
+    ).join('');
+
+    const bdHtml = segments.map(s =>
+        `<div class="quota-bd-row">
+            <div class="quota-bd-color" style="background:${s.color}"></div>
+            <div class="quota-bd-name" title="${esc(s.name)}">${esc(s.name)}</div>
+            <div class="quota-bd-amount">${yen(s.cost)}</div>
+            <div class="quota-bd-pct">${((s.cost/limit)*100).toFixed(1)}%</div>
+        </div>`
+    ).join('');
+
+    const remainCls = overLimit ? 'loss' : remaining === 0 ? 'loss' : 'gain';
+    const remainLabel = overLimit ? `超過 ${yen(used - limit)}` : `残 ${yen(remaining)}`;
+
+    el.innerHTML = `
+    <div class="quota-head">
+        <span class="quota-label">生涯非課税枠の使用状況</span>
+        <span class="quota-amount">${yen(used)} / ${yen(limit)} (${usedPct.toFixed(1)}%)</span>
+    </div>
+    <div class="quota-bar">${segHtml}</div>
+    <div class="quota-meta">
+        <span>銘柄: ${items.length}件</span>
+        <span class="quota-remain ${remainCls}">${remainLabel}</span>
+    </div>
+    <div class="quota-breakdown">${bdHtml}</div>`;
 }
 
 function renderAccount(acType, listId, headRightId) {
+    // NISA口座は枠使用状況パネルも更新
+    if (acType === '新NISA積立') renderNisaQuota(acType, 'nisaTsumitateQuota');
+    if (acType === '新NISA成長') renderNisaQuota(acType, 'nisaSeichouQuota');
+
     const af = funds.filter(f => f.account === acType);
     let acCost = 0, acValue = 0;
     af.forEach(f => {
@@ -1338,7 +1890,7 @@ function buildFundGroups() {
 
 function renderPriceTable() {
     const section = $('priceSection');
-    if (funds.length === 0) { section.classList.add('hidden'); return; }
+    if (funds.length === 0 && stocks.length === 0) { section.classList.add('hidden'); return; }
     section.classList.remove('hidden');
 
     _fundGroups = buildFundGroups();
@@ -1353,7 +1905,7 @@ function renderPriceTable() {
             const f = items[0];
             const { pnl, rate } = calcFund(f);
             const cls   = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : 'zero';
-            const acCls = f.account === 'NISA' ? 'nisa' : 'tokutei';
+            const acCls = accountCls(f.account);
             html += `
             <tr>
                 <td>
@@ -1404,7 +1956,7 @@ function renderPriceTable() {
             items.forEach(f => {
                 const { pnl, rate } = calcFund(f);
                 const cls   = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : 'zero';
-                const acCls = f.account === 'NISA' ? 'nisa' : 'tokutei';
+                const acCls = accountCls(f.account);
                 html += `
             <tr class="pt-sub-row">
                 <td>
@@ -1422,6 +1974,34 @@ function renderPriceTable() {
         }
     });
 
+    // 株式行（funds の後）
+    stocks.forEach(s => {
+        const c     = calcStock(s);
+        const cls   = c.pnl > 0 ? 'gain' : c.pnl < 0 ? 'loss' : 'zero';
+        const acCls = accountCls(s.account);
+        const yahoo = s.code
+            ? `https://finance.yahoo.co.jp/quote/${encodeURIComponent(s.code)}`
+            : `https://finance.yahoo.co.jp/search/?query=${encodeURIComponent(s.name)}`;
+        html += `
+        <tr>
+            <td>
+                <div class="pt-name-text">${esc(s.name)} <span style="font-size:10px;color:var(--text-muted)">📈 ${esc(s.code || '')}</span></div>
+                <div class="pt-meta">
+                    <span class="pt-badge ${acCls}">${esc(s.account)}</span>
+                    <a class="pt-yahoo" href="${yahoo}" target="_blank" rel="noopener noreferrer">Yahoo! ↗</a>
+                </div>
+            </td>
+            <td>
+                <input class="price-inp" type="text" inputmode="decimal"
+                       value="${s.curPrice || 0}" data-stock-id="${s.id}" autocomplete="off" autocorrect="off">
+            </td>
+            <td class="pt-pnl-col">
+                <span class="pt-pnl ${cls}"  id="pt-pnl-${s.id}">${pnlStr(c.pnl)}</span>
+                <span class="pt-rate ${cls}" id="pt-rate-${s.id}">(${rateStr(c.rate)})</span>
+            </td>
+        </tr>`;
+    });
+
     $('priceTableBody').innerHTML = html;
     renderLastUpdated();
 }
@@ -1432,8 +2012,11 @@ function schedulePartialRender() {
     clearTimeout(_priceRenderTimer);
     _priceRenderTimer = setTimeout(() => {
         renderSummary();
-        renderAccount('NISA', 'nisaList',    'nisaHeadRight');
-        renderAccount('特定', 'tokuteiList', 'tokuteiHeadRight');
+        renderAccount('旧NISA',   'nisaOldList',       'nisaOldHeadRight');
+        renderAccount('新NISA積立', 'nisaTsumitateList', 'nisaTsumitateHeadRight');
+        renderAccount('新NISA成長', 'nisaSeichouList',   'nisaSeichouHeadRight');
+        renderAccount('特定',      'tokuteiList',       'tokuteiHeadRight');
+        renderStocks();
         renderCharts();
     }, 400);
 }
@@ -1441,7 +2024,7 @@ function schedulePartialRender() {
 // ── Charts ─────────────────────────────────────────────────────────────────
 function renderCharts() {
     const section = $('chartsSection');
-    if (funds.length === 0) {
+    if (funds.length === 0 && stocks.length === 0 && dcPension.totalValue <= 0) {
         section.classList.add('hidden');
         [chartFundPie, chartAccountPie, chartPnLBar].forEach(c => c && c.destroy());
         chartFundPie = chartAccountPie = chartPnLBar = null;
@@ -1469,9 +2052,26 @@ function renderCharts() {
         }
     });
 
+    // ── 銘柄別にグループ化（NISA・特定を合算、株式も含む）──
+    const fundMap = {};
+    funds.forEach(f => {
+        const { value, pnl } = calcFund(f);
+        if (!fundMap[f.name]) fundMap[f.name] = { value: 0, pnl: 0 };
+        fundMap[f.name].value += value;
+        fundMap[f.name].pnl   += pnl;
+    });
+    stocks.forEach(s => {
+        const { value, pnl } = calcStock(s);
+        const key = s.name + ' 📈';
+        if (!fundMap[key]) fundMap[key] = { value: 0, pnl: 0 };
+        fundMap[key].value += value;
+        fundMap[key].pnl   += pnl;
+    });
+    const fundNames = Object.keys(fundMap);
+
     // ── 銘柄別 保有割合（ドーナツ）──
-    const fundLabels = funds.map(f => f.name.length > 15 ? f.name.slice(0, 15) + '…' : f.name);
-    const fundValues = funds.map(f => Math.round(calcFund(f).value));
+    const fundLabels = fundNames.map(n => n.length > 15 ? n.slice(0, 15) + '…' : n);
+    const fundValues = fundNames.map(n => Math.round(fundMap[n].value));
 
     if (chartFundPie) chartFundPie.destroy();
     chartFundPie = new Chart($('chartFundPie'), {
@@ -1480,7 +2080,7 @@ function renderCharts() {
             labels: fundLabels,
             datasets: [{
                 data: fundValues,
-                backgroundColor: PALETTE.slice(0, funds.length),
+                backgroundColor: PALETTE.slice(0, fundNames.length),
                 borderWidth: 2,
                 borderColor: '#fff'
             }]
@@ -1489,31 +2089,44 @@ function renderCharts() {
     });
 
     // ── 口座別 資産比率（ドーナツ）──
-    const nisaVal    = funds.filter(f => f.account === 'NISA').reduce((s, f) => s + calcFund(f).value, 0);
-    const tokuteiVal = funds.filter(f => f.account === '特定').reduce((s, f) => s + calcFund(f).value, 0);
+    const acTypes  = ['旧NISA', '新NISA積立', '新NISA成長', '特定', '持株会', '確定拠出年金'];
+    const acColors = ['#0284c7', '#059669', '#7c3aed', '#d97706', '#ea580c', '#0f766e'];
+    const acValues = acTypes.map(t => {
+        if (t === '確定拠出年金') return Math.round(dcPension.totalValue || 0);
+        const fundSum  = funds.filter(f => f.account === t).reduce((s, f) => s + calcFund(f).value, 0);
+        const stockSum = stocks.filter(s => s.account === t).reduce((sum, s) => sum + calcStock(s).value, 0);
+        return Math.round(fundSum + stockSum);
+    });
+    const acFiltered = acTypes.reduce((acc, t, i) => {
+        if (acValues[i] > 0) {
+            const label = t === '確定拠出年金' ? t : t + '口座';
+            acc.labels.push(label); acc.data.push(acValues[i]); acc.colors.push(acColors[i]);
+        }
+        return acc;
+    }, { labels: [], data: [], colors: [] });
 
     if (chartAccountPie) chartAccountPie.destroy();
     chartAccountPie = new Chart($('chartAccountPie'), {
         type: 'doughnut',
         data: {
-            labels: ['NISA口座', '特定口座'],
+            labels: acFiltered.labels,
             datasets: [{
-                data: [Math.round(nisaVal), Math.round(tokuteiVal)],
-                backgroundColor: ['#059669', '#d97706'],
+                data: acFiltered.data,
+                backgroundColor: acFiltered.colors,
                 borderWidth: 2,
                 borderColor: '#fff'
             }]
         },
-        options: doughnutOpts(12)
+        options: doughnutOpts(11)
     });
 
     // ── 銘柄別 損益（横棒グラフ）──
-    const pnlValues  = funds.map(f => Math.round(calcFund(f).pnl));
-    const barLabels  = funds.map(f => f.name.length > 14 ? f.name.slice(0, 14) + '…' : f.name);
+    const pnlValues  = fundNames.map(n => Math.round(fundMap[n].pnl));
+    const barLabels  = fundNames.map(n => n.length > 14 ? n.slice(0, 14) + '…' : n);
     const barBg      = pnlValues.map(v => v >= 0 ? 'rgba(37,99,235,0.82)'  : 'rgba(220,38,38,0.82)');
     const barBorder  = pnlValues.map(v => v >= 0 ? '#1d4ed8' : '#b91c1c');
 
-    const barHeight = Math.max(140, funds.length * 52);
+    const barHeight = Math.max(140, fundNames.length * 52);
     $('chartBarWrap').style.height = barHeight + 'px';
 
     if (chartPnLBar) chartPnLBar.destroy();
@@ -1571,7 +2184,7 @@ function openAdd() {
     editId = null;
     $('sheetTitle').textContent = '銘柄を追加';
     $('inpName').value    = '';
-    $('inpAccount').value = 'NISA';
+    $('inpAccount').value = '新NISA積立';
     $('inpQty').value     = '';
     $('inpAcq').value     = '';
     $('inpCur').value     = '';
@@ -1667,20 +2280,109 @@ function saveData() {
     showToast('✓ 保存しました');
 }
 
+// ── Backup Export / Import ─────────────────────────────────────────────────
+function exportBackup() {
+    const backup = {
+        _version: 3,
+        _exportedAt: new Date().toISOString(),
+        funds,
+        history,
+        settings,
+        dcPension,
+        dcHistory,
+        stocks
+    };
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+    const d  = new Date();
+    const ds = String(d.getFullYear())
+        + pad2(d.getMonth() + 1)
+        + pad2(d.getDate())
+        + pad2(d.getHours())
+        + pad2(d.getMinutes());
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `投資管理_バックアップ_${ds}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    showToast('📤 バックアップを出力しました');
+}
+
+function importBackup(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        let backup;
+        try { backup = JSON.parse(e.target.result); } catch {
+            alert('ファイルの読み込みに失敗しました。\n有効なJSONファイルを選択してください。');
+            return;
+        }
+        if (!Array.isArray(backup.funds) || !Array.isArray(backup.history)) {
+            alert('このファイルは有効なバックアップ形式ではありません。');
+            return;
+        }
+        const exportedAt = backup._exportedAt
+            ? new Date(backup._exportedAt).toLocaleString('ja-JP')
+            : '不明';
+        const dcCount    = (backup.dcHistory && Array.isArray(backup.dcHistory)) ? backup.dcHistory.length : 0;
+        const stockCount = (backup.stocks    && Array.isArray(backup.stocks))    ? backup.stocks.length    : 0;
+        const msg = `バックアップから復元しますか？\n\n`
+            + `出力日時: ${exportedAt}\n`
+            + `銘柄数: ${backup.funds.length}件\n`
+            + `株式数: ${stockCount}件\n`
+            + `履歴数: ${backup.history.length}件\n`
+            + `DC履歴: ${dcCount}件\n\n`
+            + `現在のデータはすべて上書きされます。`;
+        if (!confirm(msg)) return;
+
+        funds   = backup.funds   || [];
+        history = backup.history || [];
+        settings = { goalAmount: 0, startDate: '', principal: 0, ...(backup.settings || {}) };
+        // DC データ（v2 以降）
+        dcPension = {
+            asOfDate: '',
+            totalValue: 0, contributions: 0, pnl: 0, holdings: [],
+            ...(backup.dcPension || {})
+        };
+        dcHistory = Array.isArray(backup.dcHistory) ? backup.dcHistory : [];
+        // 株式（v3 以降）
+        stocks = Array.isArray(backup.stocks) ? backup.stocks : [];
+
+        persist();
+        persistHistory();
+        persistSettings();
+        persistDc();
+        persistDcHistory();
+        persistStocks();
+        applySettingsToInputs();
+        render();
+        showToast('📂 バックアップから復元しました');
+    };
+    reader.readAsText(file);
+}
+
 // ── Reset ──────────────────────────────────────────────────────────────────
 function resetData() {
-    if (!confirm('すべてのデータを初期化しますか？\n銘柄データと記録履歴の両方が消えます。\nこの操作は元に戻せません。')) return;
+    if (!confirm('すべてのデータを初期化しますか？\n銘柄・株式・履歴・確定拠出年金のデータがすべて消えます。\nこの操作は元に戻せません。')) return;
     funds = [];
     history = [];
+    dcPension = { asOfDate: '', totalValue: 0, contributions: 0, pnl: 0, holdings: [] };
+    dcHistory = [];
+    stocks = [];
     persist();
     persistHistory();
+    persistDc();
+    persistDcHistory();
+    persistStocks();
     render();
     showToast('データをリセットしました');
 }
 
 // ── CSV Export ─────────────────────────────────────────────────────────────
 function exportCSV() {
-    if (funds.length === 0) { alert('エクスポートするデータがありません'); return; }
+    if (funds.length === 0 && stocks.length === 0) { alert('エクスポートするデータがありません'); return; }
 
     const headers = [
         '銘柄名', '口座種別', '保有口数（口）',
@@ -1688,7 +2390,7 @@ function exportCSV() {
         '取得金額（円）', '現在評価額（円）', '損益額（円）', '損益率（%）'
     ];
 
-    const rows = funds.map(f => {
+    const fundRows = funds.map(f => {
         const { cost, value, pnl, rate } = calcFund(f);
         return [
             f.name,
@@ -1702,6 +2404,21 @@ function exportCSV() {
             rate.toFixed(2)
         ];
     });
+    const stockRows = stocks.map(s => {
+        const { cost, value, pnl, rate } = calcStock(s);
+        return [
+            s.name + ' 📈',
+            s.account,
+            s.shares,
+            s.acqPrice,
+            s.curPrice,
+            Math.round(cost),
+            Math.round(value),
+            Math.round(pnl),
+            rate.toFixed(2)
+        ];
+    });
+    const rows = [...fundRows, ...stockRows];
 
     const csv = [headers, ...rows]
         .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
@@ -1734,12 +2451,27 @@ function todayStr() {
 }
 
 function recordSnapshot() {
-    if (funds.length === 0) { alert('記録する銘柄データがありません'); return; }
+    if (funds.length === 0 && stocks.length === 0) { alert('記録する銘柄データがありません'); return; }
 
     let totalCost = 0, totalValue = 0;
-    funds.forEach(f => { const c = calcFund(f); totalCost += c.cost; totalValue += c.value; });
+    funds.forEach(f  => { const c = calcFund(f);  totalCost += c.cost; totalValue += c.value; });
+    stocks.forEach(s => { const c = calcStock(s); totalCost += c.cost; totalValue += c.value; });
     const pnl  = totalValue - totalCost;
     const rate = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+
+    const fundBreakdown = funds.map(f => {
+        const c = calcFund(f);
+        return { name: f.name, account: f.account, qty: f.qty, acq: f.acq, cur: f.cur,
+                 cost: Math.round(c.cost), value: Math.round(c.value),
+                 pnl: Math.round(c.pnl), rate: parseFloat(c.rate.toFixed(2)) };
+    });
+    const stockBreakdown = stocks.map(s => {
+        const c = calcStock(s);
+        return { name: s.name, account: s.account, code: s.code, type: 'stock',
+                 qty: s.shares, acq: s.acqPrice, cur: s.curPrice,
+                 cost: Math.round(c.cost), value: Math.round(c.value),
+                 pnl: Math.round(c.pnl), rate: parseFloat(c.rate.toFixed(2)) };
+    });
 
     const today = todayStr();
     const snap  = {
@@ -1747,7 +2479,8 @@ function recordSnapshot() {
         value: Math.round(totalValue),
         cost:  Math.round(totalCost),
         pnl:   Math.round(pnl),
-        rate:  parseFloat(rate.toFixed(2))
+        rate:  parseFloat(rate.toFixed(2)),
+        funds: [...fundBreakdown, ...stockBreakdown]
     };
 
     const idx = history.findIndex(h => h.date === today);
@@ -1764,6 +2497,54 @@ function recordSnapshot() {
     renderHistory();
 }
 
+// ── Auto History (price_history.json × 現在の保有口数) ────────────────────
+function combinedHistory() {
+    const manualDates = new Set(history.map(h => h.date));
+    return [...history, ...autoHistory.filter(h => !manualDates.has(h.date))]
+        .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function buildAutoHistory(data) {
+    autoHistory = [];
+    Object.entries(data).forEach(([date, prices]) => {
+        if (funds.length === 0) return;
+        let totalCost = 0, totalValue = 0;
+        const breakdown = [];
+        funds.forEach(f => {
+            const cur = prices[f.name];
+            if (cur == null) return;
+            const cost  = (f.qty * f.acq) / 10000;
+            const value = (f.qty * cur) / 10000;
+            const pnl   = value - cost;
+            const rate  = cost > 0 ? (pnl / cost) * 100 : 0;
+            totalCost  += cost;
+            totalValue += value;
+            breakdown.push({ name: f.name, account: f.account, qty: f.qty, acq: f.acq, cur,
+                cost: Math.round(cost), value: Math.round(value),
+                pnl: Math.round(pnl), rate: parseFloat(rate.toFixed(2)) });
+        });
+        if (breakdown.length === 0) return;
+        const pnl  = totalValue - totalCost;
+        const rate = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+        autoHistory.push({ date, auto: true,
+            value: Math.round(totalValue), cost: Math.round(totalCost),
+            pnl: Math.round(pnl), rate: parseFloat(rate.toFixed(2)), funds: breakdown });
+    });
+    autoHistory.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+async function loadPriceHistory() {
+    try {
+        const url = 'https://raw.githubusercontent.com/keisuketwvwv-svg/my-app/main/price_history.json?' + Date.now();
+        const resp = await fetch(url);
+        if (!resp.ok) return;
+        const json = await resp.json();
+        priceHistData = json.history || {};
+        buildAutoHistory(priceHistData);
+        renderHistory();
+    } catch(e) { /* 失敗時は静かに無視 */ }
+}
+
 function deleteHistEntry(date) {
     if (!confirm(`${date} の記録を削除しますか？`)) return;
     history = history.filter(h => h.date !== date);
@@ -1771,139 +2552,224 @@ function deleteHistEntry(date) {
     renderHistory();
 }
 
+// ── History Period Aggregation ─────────────────────────────────────────────
+function aggregateHistory(period) {
+    const sorted = combinedHistory();
+
+    // Compute cutoff date
+    const today = new Date();
+    let cutoff = null;
+    if (period === '1m') { cutoff = new Date(today); cutoff.setMonth(cutoff.getMonth() - 1); }
+    else if (period === '3m') { cutoff = new Date(today); cutoff.setMonth(cutoff.getMonth() - 3); }
+    else if (period === '6m') { cutoff = new Date(today); cutoff.setMonth(cutoff.getMonth() - 6); }
+    else if (period === '1y') { cutoff = new Date(today); cutoff.setFullYear(cutoff.getFullYear() - 1); }
+    else if (period === '3y') { cutoff = new Date(today); cutoff.setFullYear(cutoff.getFullYear() - 3); }
+    else if (period === '5y') { cutoff = new Date(today); cutoff.setFullYear(cutoff.getFullYear() - 5); }
+
+    const cutoffStr = cutoff ? cutoff.toISOString().slice(0, 10) : null;
+    const dcFiltered = cutoffStr
+        ? dcHistory.filter(dh => dh.asOfDate >= cutoffStr)
+        : [...dcHistory];
+
+    let filtered = cutoffStr ? sorted.filter(h => h.date >= cutoffStr) : [...sorted];
+
+    if (period === '6m' || period === '1y' || period === '3y' || period === '5y' || period === 'all') {
+        // Monthly aggregation: last IT record per month
+        const groups = new Map();
+        filtered.forEach(h => { groups.set(h.date.slice(0, 7), h); });
+        // Fill in DC-only months not covered by any IT record
+        dcFiltered.forEach(dh => {
+            const key = dh.asOfDate.slice(0, 7);
+            if (!groups.has(key)) {
+                groups.set(key, { date: dh.asOfDate, value: 0, cost: 0, pnl: 0, rate: 0, dcOnly: true });
+            }
+        });
+        filtered = Array.from(groups.values()).sort((a, b) => a.date.localeCompare(b.date));
+    } else {
+        // Short periods: add DC snapshots in range that have no matching IT record
+        const itDates = new Set(filtered.map(h => h.date));
+        dcFiltered.forEach(dh => {
+            if (!itDates.has(dh.asOfDate)) {
+                filtered.push({ date: dh.asOfDate, value: 0, cost: 0, pnl: 0, rate: 0, dcOnly: true });
+            }
+        });
+        filtered.sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    return filtered;
+}
+
+function histLabel(h) {
+    if (histPeriod === '1y' || histPeriod === '3y' || histPeriod === '5y' || histPeriod === 'all') {
+        const [y, m] = h.date.split('-');
+        return `${y.slice(2)}/${m}`;
+    }
+    const d = new Date(h.date);
+    return `${d.getMonth()+1}/${d.getDate()}`;
+}
+
 function renderHistory() {
+    const data = aggregateHistory(histPeriod);
     const chartsEl = $('histCharts');
-    const combined = combinedHistory();
-    if (combined.length >= 2) {
+    if (data.length >= 2) {
         chartsEl.classList.remove('hidden');
-        renderHistoryCharts();
+        renderHistoryCharts(data);
     } else {
         chartsEl.classList.add('hidden');
         if (chartValueLine) { chartValueLine.destroy(); chartValueLine = null; }
-        if (chartPnLLine)   { chartPnLLine.destroy();   chartPnLLine   = null; }
     }
-    renderHistTable();
+    renderHistTable(data);
 }
 
-function renderHistTable() {
+function renderHistTable(data) {
     const tbody = $('histTableBody');
-    const combined = combinedHistory();
-    if (combined.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px 10px;color:var(--text-muted);font-size:13px;">まだ記録がありません<br><small>「今日のデータを記録」か自動取得で履歴が作成されます</small></td></tr>';
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px 10px;color:var(--text-muted);font-size:13px;">まだ記録がありません<br><small>「今日のデータを記録」を押してスナップショットを保存できます</small></td></tr>';
         return;
     }
-    tbody.innerHTML = [...combined].reverse().map(h => {
-        const cls = h.pnl > 0 ? 'gain' : h.pnl < 0 ? 'loss' : 'zero';
-        const action = h.auto
-            ? `<span style="font-size:10px;color:var(--text-muted);padding:2px 5px;background:var(--bg);border-radius:4px;">自動</span>`
-            : `<button class="btn-hist-del" onclick="deleteHistEntry('${h.date}')">削除</button>`;
+    tbody.innerHTML = [...data].reverse().map(h => {
+        const dcV = dcValueAt(h.date);
+        const dcC = dcContribAt(h.date);
+        let value, cost, pnl;
+        if (h.dcOnly) {
+            value = dcV; cost = dcC; pnl = dcV - dcC;
+        } else if (histFilter === 'funds') {
+            value = h.value; cost = h.cost; pnl = h.pnl;
+        } else {
+            value = h.value + dcV; cost = h.cost + dcC; pnl = h.pnl + (dcV - dcC);
+        }
+        const rate = cost > 0 ? (pnl / cost) * 100 : 0;
+        const cls  = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : 'zero';
+        const isAuto = h.dcOnly || (h.auto && !history.find(m => m.date === h.date));
+        const actionCell = h.dcOnly
+            ? `<span class="auto-hist-badge" style="background:#0f766e20;color:#0f766e">DC</span>`
+            : isAuto
+                ? `<span class="auto-hist-badge">自動</span>`
+                : `<button class="btn-hist-del" onclick="event.stopPropagation();deleteHistEntry('${h.date}')">削除</button>`;
+        const rowClick = h.dcOnly ? '' : `onclick="openHistDetail('${h.date}')"`;
         return `
-        <tr>
+        <tr class="hist-row" ${rowClick} style="${h.dcOnly ? 'cursor:default' : ''}">
             <td>${h.date}</td>
-            <td class="hist-value">${yen(h.value)}</td>
-            <td class="hist-pnl ${cls}">${pnlStr(h.pnl)}</td>
-            <td class="hist-rate ${cls}">${rateStr(h.rate)}</td>
-            <td>${action}</td>
+            <td class="hist-value">${yen(value)}</td>
+            <td class="hist-pnl ${cls}">${pnlStr(pnl)}</td>
+            <td class="hist-rate ${cls}">${rateStr(rate)}</td>
+            <td>${actionCell}</td>
         </tr>`;
     }).join('');
 }
 
-function renderHistoryCharts() {
-    const combined  = combinedHistory();
-    const labels    = combined.map(h => { const d = new Date(h.date); return `${d.getMonth()+1}/${d.getDate()}`; });
-    const longLabels = combined.map(h => h.date);
-    const values    = combined.map(h => h.value);
-    const pnls      = combined.map(h => h.pnl);
-    const ptRadius  = combined.length > 30 ? 2 : 4;
+function renderHistoryCharts(data) {
+    // 'funds' フィルター時は DC のみ行（IT 記録のない月）を除外
+    const chartData  = histFilter === 'funds' ? data.filter(h => !h.dcOnly) : data;
+    const labels     = chartData.map(h => histLabel(h));
+    const longLabels = chartData.map(h => h.date);
 
-    const xAxis = {
-        grid:   { color: '#e2e8f0' },
-        border: { color: '#cbd5e1' },
-        ticks:  { font: { size: 11, family: CHART_FONT }, color: '#64748b', maxTicksLimit: 8, maxRotation: 0 }
-    };
+    let values, costs, pnls;
+    if (histFilter === 'funds') {
+        values = chartData.map(h => h.value);
+        costs  = chartData.map(h => h.cost);
+        pnls   = chartData.map(h => h.pnl);
+    } else if (histFilter === 'dc') {
+        values = chartData.map(h => dcValueAt(h.date));
+        costs  = chartData.map(h => dcContribAt(h.date));
+        pnls   = chartData.map(h => dcValueAt(h.date) - dcContribAt(h.date));
+    } else {
+        values = chartData.map(h => h.value + dcValueAt(h.date));
+        costs  = chartData.map(h => h.cost  + dcContribAt(h.date));
+        pnls   = chartData.map(h => h.pnl   + (dcValueAt(h.date) - dcContribAt(h.date)));
+    }
+
+    const ptRadius = data.length > 30 ? 2 : 4;
+
     const yFmt = v => {
         const a = Math.abs(v);
         if (a >= 1000000) return (v/1000000).toFixed(1) + 'M';
         if (a >= 10000)   return (v/10000).toFixed(0) + '万';
         return v.toLocaleString('ja-JP');
     };
-    const yAxis = (extra = {}) => ({
-        grid:   { color: '#e2e8f0' },
-        border: { color: '#cbd5e1' },
-        ticks:  { font: { size: 11, family: CHART_FONT }, color: '#64748b', callback: yFmt },
-        ...extra
-    });
+    const axisBase = {
+        grid: { color: '#e2e8f0' }, border: { color: '#cbd5e1' },
+        ticks: { font: { size: 10, family: CHART_FONT }, color: '#64748b', callback: yFmt }
+    };
 
-    // ── 総資産 line chart ──
     if (chartValueLine) chartValueLine.destroy();
     chartValueLine = new Chart($('chartValueLine'), {
         type: 'line',
         data: {
             labels,
-            datasets: [{
-                data: values,
-                borderColor: '#2563eb',
-                backgroundColor: 'rgba(37,99,235,0.07)',
-                borderWidth: 2.5,
-                pointBackgroundColor: '#2563eb',
-                pointRadius: ptRadius,
-                pointHoverRadius: 5,
-                tension: 0.35,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { callbacks: { title: (items) => longLabels[items[0].dataIndex], label: ctx => ` ${yen(ctx.raw)}` } }
-            },
-            scales: { x: xAxis, y: yAxis() }
-        }
-    });
-
-    // ── 損益 line chart ──
-    if (chartPnLLine) chartPnLLine.destroy();
-    chartPnLLine = new Chart($('chartPnLLine'), {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [{
-                data: pnls,
-                borderColor: '#059669',
-                backgroundColor: 'rgba(5,150,105,0.07)',
-                borderWidth: 2.5,
-                pointBackgroundColor: pnls.map(v => v >= 0 ? '#059669' : '#dc2626'),
-                pointRadius: ptRadius,
-                pointHoverRadius: 5,
-                tension: 0.35,
-                fill: true,
-                segment: {
-                    borderColor: ctx => ctx.p0.parsed.y < 0 ? '#dc2626' : '#059669',
-                    backgroundColor: ctx => ctx.p0.parsed.y < 0 ? 'rgba(220,38,38,0.07)' : 'rgba(5,150,105,0.07)'
+            datasets: [
+                {
+                    label: '総資産',
+                    data: values,
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37,99,235,0.06)',
+                    borderWidth: 2.5,
+                    pointBackgroundColor: '#2563eb',
+                    pointRadius: ptRadius, pointHoverRadius: 5,
+                    tension: 0.35, fill: true,
+                    yAxisID: 'y'
+                },
+                {
+                    label: '総取得額',
+                    data: costs,
+                    borderColor: '#94a3b8',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.5,
+                    borderDash: [5, 3],
+                    pointRadius: 0, pointHoverRadius: 3,
+                    tension: 0.35, fill: false,
+                    yAxisID: 'y'
+                },
+                {
+                    label: '損益',
+                    data: pnls,
+                    borderWidth: 2,
+                    pointRadius: ptRadius, pointHoverRadius: 5,
+                    tension: 0.35, fill: false,
+                    yAxisID: 'y1',
+                    pointBackgroundColor: pnls.map(v => v >= 0 ? '#059669' : '#dc2626'),
+                    segment: {
+                        borderColor: ctx => ctx.p0.parsed.y < 0 ? '#dc2626' : '#059669'
+                    }
                 }
-            }]
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: { display: false },
-                tooltip: { callbacks: { title: (items) => longLabels[items[0].dataIndex], label: ctx => ` ${pnlStr(ctx.raw)}` } }
+                legend: {
+                    display: true, position: 'top',
+                    labels: { font: { size: 11, family: CHART_FONT }, boxWidth: 12, padding: 10 }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: items => longLabels[items[0].dataIndex],
+                        label: ctx => {
+                            if (ctx.datasetIndex === 0) return ` 総資産: ${yen(ctx.raw)}`;
+                            if (ctx.datasetIndex === 1) return ` 総取得額: ${yen(ctx.raw)}`;
+                            return ` 損益: ${pnlStr(ctx.raw)}`;
+                        }
+                    }
+                }
             },
-            scales: { x: xAxis, y: yAxis() }
+            scales: {
+                x: { grid: { color: '#e2e8f0' }, border: { color: '#cbd5e1' },
+                     ticks: { font: { size: 11, family: CHART_FONT }, color: '#64748b', maxTicksLimit: 8, maxRotation: 0 } },
+                y:  { ...axisBase, position: 'left' },
+                y1: { ...axisBase, position: 'right', grid: { drawOnChartArea: false } }
+            }
         }
     });
 }
 
 // ── History CSV Export ──────────────────────────────────────────────────────
 function exportHistCSV() {
-    const combined = combinedHistory();
-    if (combined.length === 0) { alert('エクスポートするデータがありません'); return; }
+    if (history.length === 0) { alert('エクスポートするデータがありません'); return; }
 
     const headers = ['日付', '総評価額（円）', '総取得額（円）', '損益額（円）', '損益率（%）'];
-    const rows = [...combined].reverse().map(h => [h.date, h.value, h.cost, h.pnl, h.rate]);
+    const rows = [...history].reverse().map(h => [h.date, h.value, h.cost, h.pnl, h.rate]);
 
     const csv = [headers, ...rows]
         .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
@@ -1923,49 +2789,6 @@ function exportHistCSV() {
     URL.revokeObjectURL(a.href);
 
     showToast('📥 推移CSVを出力しました');
-}
-
-// ── Auto History Build (price_history.json) ────────────────────────────────
-function buildAutoHistory(data) {
-    if (funds.length === 0) return;
-    const hist = data.history || {};
-    const totalCost = funds.reduce((s, f) => s + calcFund(f).cost, 0);
-    if (totalCost <= 0) return;
-
-    const entries = [];
-    for (const [date, prices] of Object.entries(hist)) {
-        let totalValue = 0;
-        let covered = 0;
-        funds.forEach(f => {
-            const p = prices[f.name];
-            if (p) { totalValue += (f.qty * p) / 10000; covered++; }
-        });
-        if (covered === 0) continue;
-        const pnl  = totalValue - totalCost;
-        const rate = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
-        entries.push({
-            date,
-            value: Math.round(totalValue),
-            cost:  Math.round(totalCost),
-            pnl:   Math.round(pnl),
-            rate:  parseFloat(rate.toFixed(2)),
-            auto:  true,
-        });
-    }
-    autoHistory = entries.sort((a, b) => a.date.localeCompare(b.date));
-    renderHistory();
-}
-
-async function loadPriceHistory() {
-    try {
-        const resp = await fetch(
-            'https://raw.githubusercontent.com/keisuketwvwv-svg/my-app/main/price_history.json?' + Date.now()
-        );
-        if (!resp.ok) return;
-        buildAutoHistory(await resp.json());
-    } catch (e) {
-        console.warn('price_history.json の読み込みに失敗:', e);
-    }
 }
 
 // ── Auto Price Load (prices.json) ──────────────────────────────────────────
@@ -2017,6 +2840,36 @@ async function loadPricesJSON(showFeedback = false) {
     } finally {
         if (btn) { btn.classList.remove('loading'); btn.textContent = '🤖 自動取得'; }
     }
+
+    // 株価も並行取得（個別失敗してOK）
+    loadStockPricesJSON(showFeedback);
+}
+
+async function loadStockPricesJSON(showFeedback = false) {
+    if (stocks.length === 0) return;
+    try {
+        const resp = await fetch('https://raw.githubusercontent.com/keisuketwvwv-svg/my-app/main/stock_prices.json?' + Date.now());
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const priceMap = data.prices || {};
+        if (Object.keys(priceMap).length === 0) return;
+
+        let count = 0;
+        stocks.forEach(s => {
+            const entry = priceMap[s.code];
+            if (entry && entry.price > 0 && s.curPrice !== entry.price) {
+                s.curPrice = entry.price;
+                count++;
+            }
+        });
+        if (count > 0) {
+            persistStocks();
+            render();
+            if (showFeedback) showToast(`📈 ${count}件の株価を自動更新しました`);
+        }
+    } catch (e) {
+        // stock_prices.json が未配置でも静かに無視
+    }
 }
 
 function renderAutoBadge(updatedAt, priceMap) {
@@ -2042,6 +2895,325 @@ function renderAutoBadge(updatedAt, priceMap) {
         badgeEl.textContent = `🤖 ${dateLabel}`;
         badgeEl.title = `prices.json 更新: ${updatedAt}`;
     }
+}
+
+// ── 確定拠出年金（DC） ─────────────────────────────────────────────────────
+function saveDcSnapshot() {
+    if (!dcPension.asOfDate || dcPension.totalValue <= 0) return;
+    const snap = {
+        asOfDate:      dcPension.asOfDate,
+        totalValue:    dcPension.totalValue,
+        contributions: dcPension.contributions,
+        pnl:           dcPension.pnl,
+        holdings:      JSON.parse(JSON.stringify(dcPension.holdings))
+    };
+    const idx = dcHistory.findIndex(h => h.asOfDate === snap.asOfDate);
+    if (idx >= 0) dcHistory[idx] = snap;
+    else { dcHistory.push(snap); dcHistory.sort((a,b) => a.asOfDate.localeCompare(b.asOfDate)); }
+    persistDcHistory();
+}
+
+// 指定日時点の DC 評価額（最も近い過去のスナップショット）
+function dcValueAt(date) {
+    if (dcHistory.length === 0) return 0;
+    let latest = null;
+    for (const s of dcHistory) {
+        if (s.asOfDate <= date) latest = s; else break;
+    }
+    return latest ? latest.totalValue : 0;
+}
+function dcContribAt(date) {
+    if (dcHistory.length === 0) return 0;
+    let latest = null;
+    for (const s of dcHistory) {
+        if (s.asOfDate <= date) latest = s; else break;
+    }
+    return latest ? latest.contributions : 0;
+}
+
+// ── DC 描画 ────────────────────────────────────────────────────────────────
+function renderDc() {
+    const empty   = $('dcEmpty');
+    const tbl     = $('dcTbl');
+    const summary = document.querySelector('#dcSectionBody .dc-summary');
+    const meta    = $('dcMeta');
+
+    const headRight = $('dcHeadRight');
+
+    if (dcPension.totalValue <= 0 && dcPension.holdings.length === 0) {
+        empty.classList.remove('hidden');
+        tbl.style.display = 'none';
+        summary.style.display = 'none';
+        meta.textContent = '―';
+        headRight.style.display = 'none';
+        return;
+    }
+    empty.classList.add('hidden');
+    tbl.style.display = '';
+    summary.style.display = '';
+
+    meta.innerHTML = dcPension.asOfDate
+        ? `基準日: <strong>${dcPension.asOfDate}</strong>`
+        : '―';
+
+    $('dcTotalValue').textContent = yen(dcPension.totalValue);
+    $('dcContrib').textContent    = yen(dcPension.contributions);
+    const pnlEl = $('dcPnl');
+    pnlEl.textContent = pnlStr(dcPension.pnl);
+    pnlEl.className   = 'ds-value ' + (dcPension.pnl > 0 ? 'gain' : dcPension.pnl < 0 ? 'loss' : '');
+
+    // ヘッダー（折りたたみ時も表示）
+    headRight.style.display = '';
+    $('dcHeadValue').textContent = yen(dcPension.totalValue);
+    const hPnl = $('dcHeadPnl');
+    const dcRate = dcPension.contributions > 0 ? (dcPension.pnl / dcPension.contributions) * 100 : 0;
+    hPnl.textContent = `損益: ${pnlStr(dcPension.pnl)} (${rateStr(dcRate)})`;
+    const pnlColor = dcPension.pnl > 0 ? '#6ee7b7' : dcPension.pnl < 0 ? '#fca5a5' : 'rgba(255,255,255,0.75)';
+    hPnl.style.color = pnlColor;
+
+    // 前回基準日比
+    const dlEl = $('dcDelta');
+    const prev = dcHistory.length >= 2
+        ? [...dcHistory].reverse().find(h => h.asOfDate < dcPension.asOfDate)
+        : null;
+    if (prev) {
+        const diff = dcPension.totalValue - prev.totalValue;
+        dlEl.textContent = (diff >= 0 ? '+' : '−') + yen(diff);
+        dlEl.className   = 'ds-value ' + (diff > 0 ? 'gain' : diff < 0 ? 'loss' : '');
+        dlEl.title       = `前回基準日: ${prev.asOfDate}`;
+    } else {
+        dlEl.textContent = '―';
+        dlEl.className   = 'ds-value';
+        dlEl.title       = '';
+    }
+
+    const tbody = $('dcHoldingsBody');
+    if (dcPension.holdings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="detail-no-data">銘柄データがありません</td></tr>';
+    } else {
+        tbody.innerHTML = dcPension.holdings.map(h => `
+            <tr>
+                <td>${esc(h.code || '―')}</td>
+                <td>${esc(h.name || '―')}</td>
+                <td>${(h.qty || 0).toLocaleString()}口</td>
+                <td>${h.unitPrice ? '¥' + h.unitPrice.toLocaleString() : '―'}</td>
+                <td>${yen(h.value || 0)}</td>
+                <td>${h.ratio != null ? h.ratio + '%' : '―'}</td>
+            </tr>`).join('');
+    }
+}
+
+// ── DC 手動編集モーダル ────────────────────────────────────────────────────
+function openDcEdit() {
+    $('dcInpAsOf').value    = dcPension.asOfDate     || '';
+    $('dcInpContrib').value = dcPension.contributions || '';
+    renderDcEditFunds(dcPension.holdings || []);
+    recalcDcEditTotals();
+    $('dcEditOverlay').classList.remove('hidden');
+}
+
+function renderDcEditFunds(list) {
+    const wrap = $('dcEditFundsList');
+    wrap.innerHTML = '';
+    list.forEach(h => addDcEditRow(h));
+    if (list.length === 0) addDcEditRow({});
+}
+
+function addDcEditRow(h = {}) {
+    const wrap = $('dcEditFundsList');
+    const row = document.createElement('div');
+    row.className = 'dc-edit-fund-row';
+    row.innerHTML = `
+        <input type="text" class="dc-fld-code" placeholder="023" value="${esc(h.code || '')}">
+        <input type="text" class="dc-fld-name" placeholder="銘柄名" value="${esc(h.name || '')}">
+        <input type="number" class="dc-fld-qty"  placeholder="口数" min="0" step="1" value="${h.qty || ''}" oninput="recalcDcEditTotals()">
+        <input type="number" class="dc-fld-unit" placeholder="基準価格" min="0" step="1" value="${h.unitPrice || ''}" oninput="recalcDcEditTotals()">
+        <button type="button" class="btn-del-fund" onclick="this.parentElement.remove();recalcDcEditTotals()">×</button>`;
+    wrap.appendChild(row);
+}
+
+// 編集モーダル：合計評価額と評価損益のリアルタイム計算
+function recalcDcEditTotals() {
+    let total = 0;
+    document.querySelectorAll('#dcEditFundsList .dc-edit-fund-row').forEach(row => {
+        const qty  = parseFloat(row.querySelector('.dc-fld-qty').value)  || 0;
+        const unit = parseFloat(row.querySelector('.dc-fld-unit').value) || 0;
+        total += (qty * unit) / 10000;
+    });
+    const contrib = parseFloat($('dcInpContrib').value) || 0;
+    const pnl     = total - contrib;
+    $('dcPvTotal').textContent = yen(total);
+    const pnlEl = $('dcPvPnl');
+    if (total > 0 && contrib > 0) {
+        pnlEl.textContent = pnlStr(pnl);
+        pnlEl.className   = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : '';
+    } else {
+        pnlEl.textContent = '―';
+        pnlEl.className   = '';
+    }
+}
+
+function saveDcEdit() {
+    const asOfDate     = $('dcInpAsOf').value;
+    const contributions= parseFloat($('dcInpContrib').value) || 0;
+
+    if (!asOfDate) { alert('基準日を入力してください'); return; }
+
+    const holdings = [];
+    let totalValue = 0;
+    document.querySelectorAll('#dcEditFundsList .dc-edit-fund-row').forEach(row => {
+        const code      = row.querySelector('.dc-fld-code').value.trim();
+        const name      = row.querySelector('.dc-fld-name').value.trim();
+        const qty       = parseFloat(row.querySelector('.dc-fld-qty').value)  || 0;
+        const unitPrice = parseFloat(row.querySelector('.dc-fld-unit').value) || 0;
+        if (!code && !name && !qty && !unitPrice) return;
+        const value = Math.round((qty * unitPrice) / 10000);
+        totalValue += value;
+        holdings.push({ code, name, qty, unitPrice, value, ratio: 0 });
+    });
+    if (holdings.length === 0) { alert('銘柄を1つ以上入力してください'); return; }
+
+    // 割合は totalValue が確定してから再計算
+    holdings.forEach(h => {
+        h.ratio = totalValue > 0 ? Math.round((h.value / totalValue) * 100) : 0;
+    });
+
+    const pnl = totalValue - contributions;
+    Object.assign(dcPension, { asOfDate, totalValue, contributions, pnl, holdings });
+    persistDc();
+    saveDcSnapshot();
+    renderDc();
+    renderSummary();
+    renderCharts();
+    renderHistory();
+    $('dcEditOverlay').classList.add('hidden');
+    showToast('🏦 確定拠出年金データを保存しました');
+}
+
+// ── 株式 ───────────────────────────────────────────────────────────────────
+function renderStocks() {
+    const empty     = $('stockEmpty');
+    const tbl       = $('stockTbl');
+    const headRight = $('stockHeadRight');
+    const meta      = $('stockMeta');
+    const tbody     = $('stockTblBody');
+
+    if (stocks.length === 0) {
+        empty.classList.remove('hidden');
+        tbl.style.display = 'none';
+        headRight.style.display = 'none';
+        meta.textContent = '―';
+        tbody.innerHTML = '';
+        return;
+    }
+    empty.classList.add('hidden');
+    tbl.style.display = '';
+
+    let totalCost = 0, totalValue = 0;
+    stocks.forEach(s => {
+        const c = calcStock(s);
+        totalCost  += c.cost;
+        totalValue += c.value;
+    });
+    const totalPnl  = totalValue - totalCost;
+    const totalRate = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+
+    // ヘッダー（折りたたみ時も表示）
+    headRight.style.display = '';
+    $('stockHeadValue').textContent = yen(totalValue);
+    const hPnl = $('stockHeadPnl');
+    hPnl.textContent = `損益: ${pnlStr(totalPnl)} (${rateStr(totalRate)})`;
+    hPnl.style.color = totalPnl > 0 ? '#6ee7b7' : totalPnl < 0 ? '#fca5a5' : 'rgba(255,255,255,0.75)';
+
+    meta.textContent = `${stocks.length}銘柄`;
+
+    tbody.innerHTML = stocks.map(s => {
+        const c   = calcStock(s);
+        const cls = c.pnl > 0 ? 'gain' : c.pnl < 0 ? 'loss' : 'zero';
+        const acCls = accountCls(s.account);
+        return `
+        <tr>
+            <td>${esc(s.code || '―')}</td>
+            <td>${esc(s.name)}</td>
+            <td><span class="pt-badge ${acCls}" style="font-size:10px;padding:1px 6px">${esc(s.account)}</span></td>
+            <td>${(s.shares || 0).toLocaleString()}</td>
+            <td>¥${(s.acqPrice || 0).toLocaleString()}</td>
+            <td>¥${(s.curPrice || 0).toLocaleString()}</td>
+            <td>${yen(c.value)}</td>
+            <td class="stk-pnl ${cls}">${pnlStr(c.pnl)}<br><small style="font-weight:600">${rateStr(c.rate)}</small></td>
+            <td><button class="btn-sm btn-edit-sm" onclick="openStockEdit('${s.id}')">編集</button></td>
+        </tr>`;
+    }).join('');
+}
+
+let _stockEditingId = null;
+
+function openStockEdit(id) {
+    _stockEditingId = id || null;
+    const s = id ? stocks.find(x => x.id === id) : null;
+    $('stockEditTitle').textContent = s ? '📈 株式 を編集' : '📈 株式 を追加';
+    $('stkInpCode').value    = s ? (s.code || '')      : '';
+    $('stkInpName').value    = s ? (s.name || '')      : '';
+    $('stkInpAccount').value = s ? (s.account || '持株会') : '持株会';
+    $('stkInpShares').value  = s ? (s.shares  || '')   : '';
+    $('stkInpAcq').value     = s ? (s.acqPrice || '')  : '';
+    $('stkInpCur').value     = s ? (s.curPrice || '')  : '';
+    $('btnStockDelete').classList.toggle('hidden', !s);
+    recalcStockEditPreview();
+    $('stockEditOverlay').classList.remove('hidden');
+}
+
+function recalcStockEditPreview() {
+    const shares = parseFloat($('stkInpShares').value) || 0;
+    const acq    = parseFloat($('stkInpAcq').value)    || 0;
+    const cur    = parseFloat($('stkInpCur').value)    || 0;
+    const cost   = shares * acq;
+    const value  = shares * cur;
+    const pnl    = value - cost;
+    $('stkPvCost').textContent  = yen(cost);
+    $('stkPvValue').textContent = yen(value);
+    const pnlEl = $('stkPvPnl');
+    if (cost > 0) {
+        pnlEl.textContent = pnlStr(pnl);
+        pnlEl.className   = pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : '';
+    } else {
+        pnlEl.textContent = '―';
+        pnlEl.className   = '';
+    }
+}
+
+function saveStockEdit() {
+    const code     = $('stkInpCode').value.trim();
+    const name     = $('stkInpName').value.trim();
+    const account  = $('stkInpAccount').value;
+    const shares   = parseFloat($('stkInpShares').value) || 0;
+    const acqPrice = parseFloat($('stkInpAcq').value)    || 0;
+    const curPrice = parseFloat($('stkInpCur').value)    || 0;
+    if (!name)     { alert('銘柄名を入力してください'); return; }
+    if (shares <= 0)   { alert('株数を入力してください'); return; }
+    if (acqPrice <= 0) { alert('取得単価を入力してください'); return; }
+
+    if (_stockEditingId) {
+        const s = stocks.find(x => x.id === _stockEditingId);
+        if (s) Object.assign(s, { code, name, account, shares, acqPrice, curPrice });
+    } else {
+        stocks.push({ id: uid(), code, name, account, shares, acqPrice, curPrice });
+    }
+    persistStocks();
+    render();
+    $('stockEditOverlay').classList.add('hidden');
+    showToast('📈 株式を保存しました');
+}
+
+function deleteStock(id) {
+    const s = stocks.find(x => x.id === id);
+    if (!s) return;
+    if (!confirm(`${s.name} を削除しますか？`)) return;
+    stocks = stocks.filter(x => x.id !== id);
+    persistStocks();
+    render();
+    $('stockEditOverlay').classList.add('hidden');
+    showToast('🗑 株式を削除しました');
 }
 
 // ── CAGR ───────────────────────────────────────────────────────────────────
@@ -2078,14 +3250,15 @@ function generateMonthlyReport() {
     const monthPfx   = `${thisYear}-${pad2(thisMonth)}`;
     const reportLabel = `${thisYear}年${thisMonth}月`;
 
-    // Current portfolio totals
+    // Current portfolio totals（投資信託 + 株式）
     let totalCost = 0, totalValue = 0;
-    funds.forEach(f => { const c = calcFund(f); totalCost += c.cost; totalValue += c.value; });
+    funds.forEach(f  => { const c = calcFund(f);  totalCost += c.cost; totalValue += c.value; });
+    stocks.forEach(s => { const c = calcStock(s); totalCost += c.cost; totalValue += c.value; });
     const totalPnL  = totalValue - totalCost;
     const totalRate = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
 
     // Monthly snapshots
-    const monthSnaps = combinedHistory().filter(h => h.date.startsWith(monthPfx));
+    const monthSnaps = history.filter(h => h.date.startsWith(monthPfx));
     const startSnap  = monthSnaps.length > 0 ? monthSnaps[0] : null;
     const endSnap    = monthSnaps.length > 1 ? monthSnaps[monthSnaps.length - 1] : null;
 
@@ -2114,12 +3287,18 @@ function generateMonthlyReport() {
     }
 
     report += `【銘柄別損益（現在）】\n`;
-    if (funds.length === 0) {
+    if (funds.length === 0 && stocks.length === 0) {
         report += `銘柄データがありません\n`;
     } else {
         funds.forEach(f => {
             const { value, pnl, rate } = calcFund(f);
             report += `${f.name}（${f.account}口座）\n`;
+            report += `  評価額: ¥${Math.round(value).toLocaleString()}`;
+            report += `  損益: ${pnlStr(pnl)} (${rateStr(rate)})\n`;
+        });
+        stocks.forEach(s => {
+            const { value, pnl, rate } = calcStock(s);
+            report += `${s.name} 📈（${s.account}）\n`;
             report += `  評価額: ¥${Math.round(value).toLocaleString()}`;
             report += `  損益: ${pnlStr(pnl)} (${rateStr(rate)})\n`;
         });
@@ -2150,12 +3329,17 @@ function generateMonthlyReport() {
 // ── Section Collapse ───────────────────────────────────────────────────────
 const SECTIONS_KEY = 'tokushi_sections_v1';
 const DEFAULT_SECTIONS = {
-    priceSectionBody:    true,   // 価格更新: 開く
-    chartsSectionBody:   false,  // グラフ: 閉じる
-    nisaBlockBody:       true,   // NISA: 開く
-    tokuteiBlockBody:    true,   // 特定: 開く
-    historySectionBody:  false,  // 資産推移: 閉じる
-    settingsSectionBody: false   // 設定: 閉じる
+    priceSectionBody:         true,
+    chartsSectionBody:        true,
+    nisaOldBlockBody:         true,
+    nisaTsumitateBlockBody:   true,
+    nisaSeichouBlockBody:     true,
+    tokuteiBlockBody:         true,
+    dcSectionBody:            true,
+    stockSectionBody:         true,
+    historySectionBody:       true,
+    histTableBodyWrap:        true,
+    settingsSectionBody:      true
 };
 
 function loadSectionStates() {
@@ -2192,6 +3376,12 @@ function setDate() {
 // ── Event Listeners ────────────────────────────────────────────────────────
 $('btnSaveData').addEventListener('click', saveData);
 $('btnExportCSV').addEventListener('click', exportCSV);
+$('btnBackup').addEventListener('click', exportBackup);
+$('btnRestore').addEventListener('click', () => $('restoreFileInput').click());
+$('restoreFileInput').addEventListener('change', e => {
+    importBackup(e.target.files[0]);
+    e.target.value = '';
+});
 $('btnReset').addEventListener('click', resetData);
 $('btnMonthlyReport').addEventListener('click', generateMonthlyReport);
 $('fabAdd').addEventListener('click', openAdd);
@@ -2199,6 +3389,26 @@ $('btnRecord').addEventListener('click', e => { e.stopPropagation(); recordSnaps
 $('btnExportHistCSV').addEventListener('click', exportHistCSV);
 $('btnSettingsSave').addEventListener('click', e => { e.stopPropagation(); saveSettings(); });
 $('btnAutoFetch').addEventListener('click', e => { e.stopPropagation(); loadPricesJSON(true); });
+
+// ── DC: 編集モーダル ──
+$('btnAddDcFund').addEventListener('click', () => { addDcEditRow({}); recalcDcEditTotals(); });
+$('btnDcSave').addEventListener('click', saveDcEdit);
+$('btnDcCancel').addEventListener('click', () => $('dcEditOverlay').classList.add('hidden'));
+$('dcInpContrib').addEventListener('input', recalcDcEditTotals);
+$('dcEditOverlay').addEventListener('click', e => {
+    if (e.target === $('dcEditOverlay')) $('dcEditOverlay').classList.add('hidden');
+});
+
+// ── 株式: 編集モーダル ──
+$('btnStockSave').addEventListener('click', saveStockEdit);
+$('btnStockCancel').addEventListener('click', () => $('stockEditOverlay').classList.add('hidden'));
+$('btnStockDelete').addEventListener('click', () => { if (_stockEditingId) deleteStock(_stockEditingId); });
+['stkInpShares','stkInpAcq','stkInpCur'].forEach(id =>
+    $(id).addEventListener('input', recalcStockEditPreview)
+);
+$('stockEditOverlay').addEventListener('click', e => {
+    if (e.target === $('stockEditOverlay')) $('stockEditOverlay').classList.add('hidden');
+});
 
 // ── Price table: auto-select on focus ──────────────────────────────────────
 $('priceTableBody').addEventListener('focusin', e => {
@@ -2209,7 +3419,7 @@ $('priceTableBody').addEventListener('focusin', e => {
 $('priceTableBody').addEventListener('input', e => {
     if (!e.target.classList.contains('price-inp')) return;
     const input = e.target;
-    const gi    = parseInt(input.dataset.groupIdx);
+    const stockId = input.dataset.stockId;
 
     const cleaned = input.value.replace(/[^0-9.]/g, '');
     if (cleaned !== input.value) {
@@ -2221,6 +3431,24 @@ $('priceTableBody').addEventListener('input', e => {
     const price = parseFloat(cleaned);
     if (!price || price <= 0) return;
 
+    // 株式行の処理
+    if (stockId) {
+        const s = stocks.find(x => x.id === stockId);
+        if (!s || s.curPrice === price) return;
+        s.curPrice = price;
+        persistStocks();
+        stampPriceUpdated();
+        const c     = calcStock(s);
+        const cls   = c.pnl > 0 ? 'gain' : c.pnl < 0 ? 'loss' : 'zero';
+        const pnlEl = $('pt-pnl-'  + s.id);
+        const rateEl= $('pt-rate-' + s.id);
+        if (pnlEl)  { pnlEl.textContent  = pnlStr(c.pnl);                pnlEl.className  = 'pt-pnl '  + cls; }
+        if (rateEl) { rateEl.textContent = '(' + rateStr(c.rate) + ')';  rateEl.className = 'pt-rate ' + cls; }
+        schedulePartialRender();
+        return;
+    }
+
+    const gi = parseInt(input.dataset.groupIdx);
     const group = _fundGroups[gi];
     if (!group) return;
 
@@ -2277,18 +3505,220 @@ document.addEventListener('click', e => {
             if (bodyId === 'chartsSectionBody') {
                 [chartFundPie, chartAccountPie, chartPnLBar].forEach(c => c && c.resize());
             } else if (bodyId === 'historySectionBody') {
-                [chartValueLine, chartPnLLine].forEach(c => c && c.resize());
+                if (chartValueLine) chartValueLine.resize();
             }
         });
     }
 });
 $('btnSave').addEventListener('click', saveFund);
 $('btnCancel').addEventListener('click', closeModal);
+$('histDetailClose').addEventListener('click', () => $('histDetailOverlay').classList.add('hidden'));
+$('histDetailOverlay').addEventListener('click', e => { if (e.target === $('histDetailOverlay')) $('histDetailOverlay').classList.add('hidden'); });
 $('overlay').addEventListener('click', e => {
     if (e.target === $('overlay')) closeModal();
 });
 ['inpQty', 'inpAcq', 'inpCur'].forEach(id => {
     $(id).addEventListener('input', updatePreview);
+});
+
+// ── History Detail Popup ───────────────────────────────────────────────────
+function openHistDetail(date) {
+    const h = combinedHistory().find(h => h.date === date);
+    if (!h) return;
+    const isAuto = h.auto && !history.find(m => m.date === date);
+    const dcV = dcValueAt(date);
+    const dcC = dcContribAt(date);
+    const totalValue = h.value + dcV;
+    const totalCost  = h.cost  + dcC;
+    const totalPnl   = h.pnl   + (dcV - dcC);
+    const totalRate  = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+    $('histDetailTitle').textContent = `📅 ${date} の内訳${isAuto ? '（自動）' : ''}`;
+    const valueCls = totalPnl >= 0 ? 'gain' : 'loss';
+    let content = `
+        <div class="detail-summary">
+            <div class="detail-stat"><div class="ds-label">総評価額</div><div class="ds-value">${yen(totalValue)}</div></div>
+            <div class="detail-stat"><div class="ds-label">損益額</div><div class="ds-value" style="color:var(--${valueCls})">${pnlStr(totalPnl)}</div></div>
+            <div class="detail-stat"><div class="ds-label">損益率</div><div class="ds-value" style="color:var(--${valueCls})">${rateStr(totalRate)}</div></div>
+        </div>`;
+    if (dcV > 0) {
+        content += `<div style="font-size:11px;color:var(--text-muted);background:var(--bg);border-radius:6px;padding:8px 10px;margin-bottom:10px">
+            内訳：NISA・特定 <strong style="color:var(--text)">${yen(h.value)}</strong> ／ 確定拠出年金 <strong style="color:var(--dc)">${yen(dcV)}</strong>
+        </div>`;
+    }
+    if (h.funds && h.funds.length > 0) {
+        const rows = h.funds.map(f => {
+            const cls = f.pnl > 0 ? 'gain' : f.pnl < 0 ? 'loss' : 'zero';
+            const badge = `<span class="pt-badge ${accountCls(f.account)}" style="font-size:9px;padding:1px 5px">${esc(f.account)}</span>`;
+            return `<tr>
+                <td><div>${esc(f.name)}</div><div style="margin-top:3px">${badge}</div></td>
+                <td>${yen(f.value)}</td>
+                <td class="${cls}">${pnlStr(f.pnl)}</td>
+                <td class="${cls}">${rateStr(f.rate)}</td>
+                <td style="color:var(--text-muted);font-size:11px">¥${f.cur.toLocaleString()}</td>
+            </tr>`;
+        }).join('');
+        content += `<div style="overflow-x:auto"><table class="detail-tbl">
+            <thead><tr><th>銘柄</th><th>評価額</th><th>損益</th><th>損益率</th><th>基準価額</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table></div>`;
+    } else {
+        content += `<div class="detail-no-data">この記録には銘柄内訳データがありません<br><small>（新しい記録から内訳が保存されます）</small></div>`;
+    }
+    content += `<div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn-save" style="flex:1" onclick="openHistEdit('${date}')">✏️ 内訳を編集</button>
+        <button class="btn-cancel" style="flex:1;margin:0" onclick="$('histDetailOverlay').classList.add('hidden')">閉じる</button>
+    </div>`;
+    $('histDetailContent').innerHTML = content;
+    $('histDetailOverlay').classList.remove('hidden');
+}
+
+// ── History Edit (内訳編集) ───────────────────────────────────────────────
+function openHistEdit(date) {
+    const h = combinedHistory().find(h => h.date === date);
+    if (!h) return;
+    const prices = priceHistData[date] || {};
+
+    const fundsToEdit = (h.funds && h.funds.length > 0)
+        ? h.funds
+        : funds.map(f => ({ name: f.name, account: f.account, qty: f.qty, acq: f.acq, cur: prices[f.name] || f.cur }));
+
+    $('histDetailTitle').textContent = `✏️ ${date} の内訳を編集`;
+
+    const rows = fundsToEdit.map((f, i) => {
+        const cur = prices[f.name] != null ? prices[f.name] : f.cur;
+        return `<tr>
+            <td>
+                <div style="font-size:12px;font-weight:600">${esc(f.name)}</div>
+                <div style="margin-top:2px"><span class="pt-badge ${accountCls(f.account)}" style="font-size:9px;padding:1px 5px">${esc(f.account)}</span></div>
+            </td>
+            <td style="text-align:right;font-size:12px;color:var(--text-muted)">¥${cur.toLocaleString()}</td>
+            <td style="width:130px">
+                <input class="edit-qty-inp" type="number" min="0" step="1"
+                    value="${f.qty}" data-idx="${i}"
+                    data-cur="${cur}" data-acq="${f.acq}"
+                    data-name="${esc(f.name)}" data-account="${esc(f.account)}"
+                    oninput="recalcEditTotal()">
+            </td>
+            <td style="text-align:right;font-size:12px;min-width:80px" id="edit-val-${i}">―</td>
+        </tr>`;
+    }).join('');
+
+    $('histDetailContent').innerHTML = `
+        <div style="overflow-x:auto">
+            <table class="detail-tbl" style="margin-bottom:12px">
+                <thead><tr><th>銘柄</th><th>基準価額</th><th>保有口数（口）</th><th>評価額</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+        <div style="background:var(--bg);border-radius:8px;padding:12px 14px;margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+                <span style="color:var(--text-muted)">合計評価額</span>
+                <span id="editTotalValue" style="font-weight:700">―</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px">
+                <span style="color:var(--text-muted)">損益</span>
+                <span id="editTotalPnl" style="font-weight:700">―</span>
+            </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+            <button class="btn-save" style="flex:1" onclick="saveHistEdit('${date}')">💾 保存</button>
+            <button class="btn-cancel" style="flex:1;margin:0" onclick="openHistDetail('${date}')">← 戻る</button>
+        </div>`;
+
+    recalcEditTotal();
+}
+
+function recalcEditTotal() {
+    const inputs = document.querySelectorAll('.edit-qty-inp');
+    let totalCost = 0, totalValue = 0;
+    inputs.forEach((inp, i) => {
+        const qty  = parseFloat(inp.value) || 0;
+        const cur  = parseFloat(inp.dataset.cur) || 0;
+        const acq  = parseFloat(inp.dataset.acq) || 0;
+        const cost  = (qty * acq) / 10000;
+        const value = (qty * cur) / 10000;
+        totalCost  += cost;
+        totalValue += value;
+        const valEl = document.getElementById('edit-val-' + i);
+        if (valEl) valEl.textContent = qty > 0 ? yen(value) : '―';
+    });
+    const pnl  = totalValue - totalCost;
+    const rate = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+    const tvEl = document.getElementById('editTotalValue');
+    const tpEl = document.getElementById('editTotalPnl');
+    if (tvEl) tvEl.textContent = totalValue > 0 ? yen(totalValue) : '―';
+    if (tpEl) {
+        tpEl.textContent = totalValue > 0 ? `${pnlStr(pnl)} (${rateStr(rate)})` : '―';
+        tpEl.style.color = totalValue > 0 ? (pnl >= 0 ? 'var(--gain)' : 'var(--loss)') : '';
+    }
+}
+
+function saveHistEdit(date) {
+    const inputs = document.querySelectorAll('.edit-qty-inp');
+    if (inputs.length === 0) return;
+
+    const breakdown = [];
+    let totalCost = 0, totalValue = 0;
+    inputs.forEach(inp => {
+        const qty     = parseFloat(inp.value) || 0;
+        const cur     = parseFloat(inp.dataset.cur) || 0;
+        const acq     = parseFloat(inp.dataset.acq) || 0;
+        const name    = inp.dataset.name;
+        const account = inp.dataset.account;
+        if (qty <= 0) return;
+        const cost  = (qty * acq) / 10000;
+        const value = (qty * cur) / 10000;
+        const pnl   = value - cost;
+        const rate  = cost > 0 ? (pnl / cost) * 100 : 0;
+        totalCost  += cost;
+        totalValue += value;
+        breakdown.push({ name, account, qty, acq, cur,
+            cost: Math.round(cost), value: Math.round(value),
+            pnl: Math.round(pnl), rate: parseFloat(rate.toFixed(2)) });
+    });
+
+    if (breakdown.length === 0) { alert('保有口数を入力してください'); return; }
+
+    const pnl  = totalValue - totalCost;
+    const rate = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+    const snap = {
+        date,
+        value: Math.round(totalValue),
+        cost:  Math.round(totalCost),
+        pnl:   Math.round(pnl),
+        rate:  parseFloat(rate.toFixed(2)),
+        funds: breakdown
+    };
+
+    const idx = history.findIndex(h => h.date === date);
+    if (idx >= 0) {
+        history[idx] = snap;
+    } else {
+        history.push(snap);
+        history.sort((a, b) => a.date.localeCompare(b.date));
+    }
+    persistHistory();
+    renderHistory();
+    $('histDetailOverlay').classList.add('hidden');
+    showToast('✓ 内訳を保存しました');
+}
+
+// ── History Period Tabs ────────────────────────────────────────────────────
+document.querySelectorAll('.hist-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        histPeriod = btn.dataset.period;
+        document.querySelectorAll('.hist-tab').forEach(b => b.classList.toggle('active', b === btn));
+        renderHistory();
+    });
+});
+
+// ── History Filter Tabs (投資信託 / DC / すべて) ───────────────────────────
+document.querySelectorAll('.hist-ftab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        histFilter = btn.dataset.filter;
+        document.querySelectorAll('.hist-ftab').forEach(b => b.classList.toggle('active', b === btn));
+        renderHistory();
+    });
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────
@@ -2299,7 +3729,7 @@ applySectionStates();
 applySettingsToInputs();
 // prices.json が存在すれば自動で価格を反映（失敗してもエラーにならない）
 loadPricesJSON(false);
-// 日次価格履歴を読み込んで資産推移グラフを自動生成
+// price_history.json から自動履歴を生成（失敗しても静かに無視）
 loadPriceHistory();
 </script>
 
