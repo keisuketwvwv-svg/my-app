@@ -32,9 +32,9 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add stock_prices.json
+          git add stock_prices.json stock_price_history.json
           if git diff --staged --quiet; then
-            echo "stock_prices.json に変更なし。コミットをスキップします。"
+            echo "stock_prices.json / stock_price_history.json に変更なし。コミットをスキップします。"
           else
             DATE=$(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M JST')
             git commit -m "chore: 株価を更新 ${DATE}"

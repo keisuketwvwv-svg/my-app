@@ -172,6 +172,30 @@ def main() -> None:
     success = len(results) - len([v for v in results.values() if v.get("stale")])
     print(f"\n完了: {success}/{len(stock_list)} 銘柄を取得 → stock_prices.json に保存")
 
+    # 株価履歴（stock_price_history.json）に当日分を追記
+    hist_path = ROOT / "stock_price_history.json"
+    price_history: dict = {}
+    if hist_path.exists():
+        try:
+            prev_hist = json.loads(hist_path.read_text(encoding="utf-8"))
+            price_history = prev_hist.get("history", {})
+        except Exception:
+            pass
+
+    today_str = now_jst.strftime("%Y-%m-%d")
+    today_prices = {
+        code: entry["price"]
+        for code, entry in results.items()
+        if not entry.get("stale")
+    }
+    if today_prices:
+        price_history[today_str] = today_prices
+        hist_path.write_text(
+            json.dumps({"history": price_history}, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
+        print(f"株価履歴に {today_str} を追記 → stock_price_history.json に保存")
+
     if len(failed) == len(stock_list):
         sys.exit(1)
 

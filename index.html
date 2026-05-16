@@ -1488,6 +1488,7 @@ let chartFundPie = null, chartAccountPie = null, chartPnLBar = null;
 let chartValueLine = null;
 let histPeriod  = '1y';  // '1m' | '3m' | '6m' | '1y' | '3y' | '5y' | 'all'
 let histFilter  = 'all';   // 'all' | 'funds' | 'dc' | 'stocks'
+let stockPriceHistData = {};  // { date: { code: price } }  stock_price_history.json
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -2505,14 +2506,16 @@ function combinedHistory() {
         .sort((a, b) => a.date.localeCompare(b.date));
 }
 
-function buildAutoHistory(data) {
+function buildAutoHistory(itData, stData) {
     autoHistory = [];
-    Object.entries(data).forEach(([date, prices]) => {
-        if (funds.length === 0) return;
+    const allDates = new Set([...Object.keys(itData || {}), ...Object.keys(stData || {})]);
+    allDates.forEach(date => {
+        const itPrices = (itData || {})[date] || {};
+        const stPrices = (stData || {})[date] || {};
         let totalCost = 0, totalValue = 0;
         const breakdown = [];
         funds.forEach(f => {
-            const cur = prices[f.name];
+            const cur = itPrices[f.name];
             if (cur == null) return;
             const cost  = (f.qty * f.acq) / 10000;
             const value = (f.qty * cur) / 10000;
@@ -2521,6 +2524,20 @@ function buildAutoHistory(data) {
             totalCost  += cost;
             totalValue += value;
             breakdown.push({ name: f.name, account: f.account, qty: f.qty, acq: f.acq, cur,
+                cost: Math.round(cost), value: Math.round(value),
+                pnl: Math.round(pnl), rate: parseFloat(rate.toFixed(2)) });
+        });
+        stocks.forEach(s => {
+            const cur = stPrices[s.code];
+            if (cur == null) return;
+            const cost  = s.shares * s.acqPrice;
+            const value = s.shares * cur;
+            const pnl   = value - cost;
+            const rate  = cost > 0 ? (pnl / cost) * 100 : 0;
+            totalCost  += cost;
+            totalValue += value;
+            breakdown.push({ name: s.name, account: s.account, code: s.code, type: 'stock',
+                qty: s.shares, acq: s.acqPrice, cur,
                 cost: Math.round(cost), value: Math.round(value),
                 pnl: Math.round(pnl), rate: parseFloat(rate.toFixed(2)) });
         });
@@ -2541,7 +2558,19 @@ async function loadPriceHistory() {
         if (!resp.ok) return;
         const json = await resp.json();
         priceHistData = json.history || {};
-        buildAutoHistory(priceHistData);
+        buildAutoHistory(priceHistData, stockPriceHistData);
+        renderHistory();
+    } catch(e) { /* 失敗時は静かに無視 */ }
+}
+
+async function loadStockPriceHistory() {
+    try {
+        const url = 'https://raw.githubusercontent.com/keisuketwvwv-svg/my-app/main/stock_price_history.json?' + Date.now();
+        const resp = await fetch(url);
+        if (!resp.ok) return;
+        const json = await resp.json();
+        stockPriceHistData = json.history || {};
+        buildAutoHistory(priceHistData, stockPriceHistData);
         renderHistory();
     } catch(e) { /* 失敗時は静かに無視 */ }
 }
@@ -2896,6 +2925,7 @@ async function loadStockPricesJSON(showFeedback = false) {
     } catch (e) {
         // stock_prices.json が未配置でも静かに無視
     }
+    loadStockPriceHistory();
 }
 
 function renderAutoBadge(updatedAt, priceMap) {
@@ -3566,26 +3596,38 @@ function openHistDetail(date) {
             <div class="detail-stat"><div class="ds-label">損益額</div><div class="ds-value" style="color:var(--${valueCls})">${pnlStr(totalPnl)}</div></div>
             <div class="detail-stat"><div class="ds-label">損益率</div><div class="ds-value" style="color:var(--${valueCls})">${rateStr(totalRate)}</div></div>
         </div>`;
+
+    const rows = [];
+    (h.funds || []).forEach(f => {
+        const cls = f.pnl > 0 ? 'gain' : f.pnl < 0 ? 'loss' : 'zero';
+        const badge = `<span class="pt-badge ${accountCls(f.account)}" style="font-size:9px;padding:1px 5px">${esc(f.account)}</span>`;
+        const priceLabel = f.type === 'stock'
+            ? `¥${f.cur.toLocaleString()}/株`
+            : `¥${f.cur.toLocaleString()}/万口`;
+        rows.push(`<tr>
+            <td><div>${esc(f.name)}</div><div style="margin-top:3px">${badge}</div></td>
+            <td>${yen(f.value)}</td>
+            <td class="${cls}">${pnlStr(f.pnl)}</td>
+            <td class="${cls}">${rateStr(f.rate)}</td>
+            <td style="color:var(--text-muted);font-size:11px">${priceLabel}</td>
+        </tr>`);
+    });
     if (dcV > 0) {
-        content += `<div style="font-size:11px;color:var(--text-muted);background:var(--bg);border-radius:6px;padding:8px 10px;margin-bottom:10px">
-            内訳：NISA・特定 <strong style="color:var(--text)">${yen(h.value)}</strong> ／ 確定拠出年金 <strong style="color:var(--dc)">${yen(dcV)}</strong>
-        </div>`;
+        const dcPnl = dcV - dcC;
+        const dcCls = dcPnl >= 0 ? 'gain' : 'loss';
+        const dcRate = dcC > 0 ? (dcPnl / dcC) * 100 : 0;
+        rows.push(`<tr style="background:rgba(15,118,110,0.04)">
+            <td><div style="color:var(--dc);font-weight:600">🏦 確定拠出年金</div><div style="margin-top:3px"><span class="pt-badge dc" style="font-size:9px;padding:1px 5px">企業型DC</span></div></td>
+            <td>${yen(dcV)}</td>
+            <td class="${dcCls}">${pnlStr(dcPnl)}</td>
+            <td class="${dcCls}">${rateStr(dcRate)}</td>
+            <td style="color:var(--text-muted);font-size:11px">補間値</td>
+        </tr>`);
     }
-    if (h.funds && h.funds.length > 0) {
-        const rows = h.funds.map(f => {
-            const cls = f.pnl > 0 ? 'gain' : f.pnl < 0 ? 'loss' : 'zero';
-            const badge = `<span class="pt-badge ${accountCls(f.account)}" style="font-size:9px;padding:1px 5px">${esc(f.account)}</span>`;
-            return `<tr>
-                <td><div>${esc(f.name)}</div><div style="margin-top:3px">${badge}</div></td>
-                <td>${yen(f.value)}</td>
-                <td class="${cls}">${pnlStr(f.pnl)}</td>
-                <td class="${cls}">${rateStr(f.rate)}</td>
-                <td style="color:var(--text-muted);font-size:11px">¥${f.cur.toLocaleString()}</td>
-            </tr>`;
-        }).join('');
+    if (rows.length > 0) {
         content += `<div style="overflow-x:auto"><table class="detail-tbl">
-            <thead><tr><th>銘柄</th><th>評価額</th><th>損益</th><th>損益率</th><th>基準価額</th></tr></thead>
-            <tbody>${rows}</tbody>
+            <thead><tr><th>銘柄</th><th>評価額</th><th>損益</th><th>損益率</th><th>価格</th></tr></thead>
+            <tbody>${rows.join('')}</tbody>
         </table></div>`;
     } else {
         content += `<div class="detail-no-data">この記録には銘柄内訳データがありません<br><small>（新しい記録から内訳が保存されます）</small></div>`;
@@ -3757,6 +3799,7 @@ applySettingsToInputs();
 loadPricesJSON(false);
 // price_history.json から自動履歴を生成（失敗しても静かに無視）
 loadPriceHistory();
+loadStockPriceHistory();
 </script>
 
 </body>
