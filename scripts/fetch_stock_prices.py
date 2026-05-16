@@ -123,13 +123,14 @@ def main() -> None:
     now_jst = datetime.now(JST)
 
     for entry in stock_list:
-        code = entry.get("code", "").strip()
-        name = entry.get("name", "").strip()
+        code   = entry.get("code", "").strip()    # アプリ内コード（stock_prices.json のキー）
+        ticker = entry.get("ticker", code).strip() # Yahoo Finance / stooq 用ティッカー
+        name   = entry.get("name", "").strip()
         if not code:
             continue
 
         print(f"  {name or code} ({code}) ... ", end="", flush=True)
-        data = fetch_price(code)
+        data = fetch_price(ticker)
 
         if data:
             results[code] = {
