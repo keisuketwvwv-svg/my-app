@@ -2508,14 +2508,17 @@ function combinedHistory() {
 
 function buildAutoHistory(itData, stData) {
     autoHistory = [];
-    const allDates = new Set([...Object.keys(itData || {}), ...Object.keys(stData || {})]);
+    const allDates = [...new Set([...Object.keys(itData || {}), ...Object.keys(stData || {})])].sort();
+    // Forward-fill caches: 各日付までに観測された最新価格を保持
+    const itCache = {};
+    const stCache = {};
     allDates.forEach(date => {
-        const itPrices = (itData || {})[date] || {};
-        const stPrices = (stData || {})[date] || {};
+        Object.assign(itCache, (itData || {})[date] || {});
+        Object.assign(stCache, (stData || {})[date] || {});
         let totalCost = 0, totalValue = 0;
         const breakdown = [];
         funds.forEach(f => {
-            const cur = itPrices[f.name];
+            const cur = itCache[f.name];
             if (cur == null) return;
             const cost  = (f.qty * f.acq) / 10000;
             const value = (f.qty * cur) / 10000;
@@ -2528,7 +2531,7 @@ function buildAutoHistory(itData, stData) {
                 pnl: Math.round(pnl), rate: parseFloat(rate.toFixed(2)) });
         });
         stocks.forEach(s => {
-            const cur = stPrices[s.code];
+            const cur = stCache[s.code];
             if (cur == null) return;
             const cost  = s.shares * s.acqPrice;
             const value = s.shares * cur;
@@ -2548,7 +2551,6 @@ function buildAutoHistory(itData, stData) {
             value: Math.round(totalValue), cost: Math.round(totalCost),
             pnl: Math.round(pnl), rate: parseFloat(rate.toFixed(2)), funds: breakdown });
     });
-    autoHistory.sort((a, b) => a.date.localeCompare(b.date));
 }
 
 async function loadPriceHistory() {
